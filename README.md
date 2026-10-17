@@ -39,3 +39,7 @@ Omit these variables to use PeerJS's default cloud and ICE settings. A self-host
 The angular perimeter, central stair/elevator core, eastern stacks 3L–3Q, western stacks and Reflection Space are informed by [UT Libraries' public PCL floor plans](https://www.lib.utexas.edu/visit-us/locations/pcl/floor-plan). Geometry is authored in gameplay units. Course tape, ramps, shortcuts, furniture scale and toy racing are fictional additions, not a surveyed interior model. Reference photographs and floor-plan images are not redistributed. This is an independent arcade recreation, not an official university game.
 
 Kart meshes, drivers, room geometry, books, textures and audio are generated locally. Inter Tight and IBM Plex Mono licenses are bundled with the fonts. Phosphor icon paths retain their MIT attribution. Three.js and PeerJS are MIT licensed.
+
+## Reference car collection
+
+Choose a car in the main menu before starting or joining a race. Apex, Club Sport and Formula are open-wheel designs; GT Roadster is open-top; Rally Coupe has a closed cockpit. The selection is remembered on this device and synchronized by the lobby host, including on rematches. All bodies use the same racing physics and collision size. Paint is assigned by the host, starting with blue, so each racer keeps a distinct color on every screen. Vehicle shapes are original procedural models inspired by the supplied reference, with no licensed manufacturer branding or external model downloads.

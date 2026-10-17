@@ -1,3 +1,4 @@
+import {CARS} from './car-catalog.js';
 import {speedRing,minimap,headingMarker,icon} from './ui/components.js';
 import {HudFeed} from './hud/hud-overlay.js';
 import {TRACK_LENGTH} from './track-layout.js';
@@ -7,6 +8,7 @@ export function mountInterface(){document.querySelector('#app').innerHTML=`
  <div id="viewport"></div><div id="damage-vignette" aria-hidden="true"></div>
  <main id="front" class="front"><div class="menu-scrim"></div><header class="menu-header"><a href="https://manta-ray-dioscurias.vercel.app/projects">MANTA RAY / GAMES</a><span class="metadata">UT AUSTIN · PCL LIBRARY</span></header>
  <section id="home-panel" class="menu-panel"><p class="metadata">Toy-sized racing / Perry-Castañeda Library</p><h1>PCL<br>Pocket Racing</h1><p class="menu-subline">Big library. Small karts.</p><label class="field-label" for="player-name">Racer name</label><input id="player-name" maxlength="20" autocomplete="nickname" placeholder="Racer">
+ <label class="field-label" for="car-select">Car</label><select id="car-select">${CARS.map(car=>`<option value="${car.id}">${car.name} / ${car.description}</option>`).join('')}</select>
  <label class="field-label" for="mode-select">Mode</label><select id="mode-select"><option value="race">Race / 3 laps</option><option value="time-trial">Time trial / best-lap ghost</option></select>
  <div class="menu-actions"><button id="practice" class="mr-btn">Quick race <span>↗</span></button><button id="host-room" class="mr-btn mr-btn--ghost">Create private lobby</button></div>
  <form id="join-form" class="join-row"><label class="sr-only" for="room-code">Invite code</label><input id="room-code" placeholder="INVITE CODE" maxlength="6" pattern="[A-Za-z2-9]{6}" required autocomplete="off"><button id="join-room" class="mr-btn mr-btn--ghost">Join</button></form><p id="network-status" class="connection-note" role="status" aria-live="polite"></p>

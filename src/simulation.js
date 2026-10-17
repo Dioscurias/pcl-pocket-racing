@@ -1,6 +1,7 @@
 import { TRACK_LENGTH, TRACK_WIDTH, CHECKPOINTS, OBSTACLES, BOOSTS, SHORTCUTS, nearestTrack, pointAtDistance, surfaceAt, insideFloor } from './track-layout.js';
+import {CARS,normalizeCar} from './car-catalog.js';
 export const KART_RADIUS = .85;
-export const PLAYER_COLORS = [0xd4b060,0xc5dfd7,0xef9568,0xa9a1d4,0xe2cdd1,0xb2cf87,0x81bbc8,0xe7dbad];
+export const PLAYER_COLORS = [0x1859b7,0xd8b35f,0xd65543,0x59b7a6,0x9e84d4,0xe5e0ce,0x79ad51,0xc96594];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),finite=(v,f=0)=>Number.isFinite(v)?v:f,angle=v=>Math.atan2(Math.sin(v),Math.cos(v));
 const emptyInput=()=>({throttle:0,steer:0,drift:false,boost:false,reset:false});
 export function createWorld(options={}){
@@ -13,10 +14,10 @@ function spawn(w,p,index=w.players.indexOf(p)){
  Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,turboUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,penalty:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_stuck:0});
  p.y=surfaceAt(p.x,p.z);p.input=emptyInput();w._inputs[p.id]=p.input;
 }
-export function addPlayer(w,id,name,{bot=false}={}){
+export function addPlayer(w,id,name,{bot=false,car}={}){
  const existing=w.players.find(p=>p.id===id);if(existing)return existing;
  if(w.players.length>=8)return null;
- const p={id:String(id).slice(0,100),name:String(name||'Racer').replace(/[<>\u0000-\u001f]/g,'').trim().slice(0,20)||'Racer',color:PLAYER_COLORS.find(color=>!w.players.some(p=>p.color===color))??PLAYER_COLORS[w.players.length%PLAYER_COLORS.length],bot:!!bot};
+ const p={id:String(id).slice(0,100),name:String(name||'Racer').replace(/[<>\u0000-\u001f]/g,'').trim().slice(0,20)||'Racer',color:PLAYER_COLORS.find(color=>!w.players.some(p=>p.color===color))??PLAYER_COLORS[w.players.length%PLAYER_COLORS.length],bot:!!bot,car:normalizeCar(car??(bot?CARS[w.players.length%CARS.length].id:undefined))};
  w.players.push(p);spawn(w,p);return p;
 }
 export function removePlayer(w,id){w.players=w.players.filter(p=>p.id!==id);delete w._inputs[id];rank(w);}
