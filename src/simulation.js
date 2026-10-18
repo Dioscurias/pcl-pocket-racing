@@ -1,7 +1,7 @@
 import { TRACK_LENGTH, TRACK_WIDTH, CHECKPOINTS, OBSTACLES, BOOSTS, ITEM_BOXES, SHORTCUTS, nearestTrack, pointAtDistance, surfaceAt, insideFloor } from './track-layout.js';
 import {CARS,normalizeCar} from './car-catalog.js';
-export const KART_RADIUS = .85;
-export const PLAYER_COLORS = [0x1859b7,0xd8b35f,0xd65543,0x59b7a6,0x9e84d4,0xe5e0ce,0x79ad51,0xc96594];
+export const KART_RADIUS = .56;
+export const PLAYER_COLORS = [0x1677ff,0xffbf3f,0xff5a4d,0x18c7b5,0xa970ff,0xfff0c7,0x83d63f,0xf04fa3];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),finite=(v,f=0)=>Number.isFinite(v)?v:f,angle=v=>Math.atan2(Math.sin(v),Math.cos(v));
 const emptyInput=()=>({throttle:0,steer:0,drift:false,boost:false,item:false,reset:false});
 export const ITEMS=Object.freeze(['sprint','shield','books','ink','cart']);

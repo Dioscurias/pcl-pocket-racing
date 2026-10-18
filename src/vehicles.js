@@ -3,6 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {normalizeCar} from './car-catalog.js';
 
+export const VEHICLE_SCALE=.65;
 const material=(color,options={})=>new THREE.MeshStandardMaterial({color,roughness:.38,...options});
 function part(parent,geometry,paint,x=0,y=0,z=0){const mesh=new THREE.Mesh(geometry,paint);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;parent.add(mesh);return mesh;}
 const box=(g,m,size,pos,r=.035)=>part(g,r<=.015?new THREE.BoxGeometry(...size):new RoundedBoxGeometry(...size,1,r),m,...pos);
@@ -43,7 +44,7 @@ function driver(g,paints,{lower=false}={}){const {paint,black,alloy,suit,glass}=
 
 export function buildVehicle({car='apex',color=0x1859b7}={}){
  const model=normalizeCar(car),group=new THREE.Group(),body=new THREE.Group();group.add(body);
- group.name=`vehicle-${model}`;group.userData.model=model;
+ group.name=`vehicle-${model}`;group.userData.model=model;group.scale.setScalar(VEHICLE_SCALE);
  const paint=material(color,{metalness:.62,roughness:.22}),black=material('#11151c',{roughness:.42}),rubber=material('#181b20',{roughness:.94}),alloy=material('#c2c9cc',{metalness:.85,roughness:.24}),carbon=material('#242831',{metalness:.25,roughness:.53}),glass=material('#16212d',{metalness:.48,roughness:.1,side:THREE.DoubleSide}),brake=material('#6a6d70',{metalness:.7,roughness:.45}),suit=material('#d1d5dd',{roughness:.75}),light=material('#e6edf2',{metalness:.3,roughness:.16}),red=material('#9b1920',{emissive:'#5c080b',emissiveIntensity:.35});
  const paints={paint,black,rubber,alloy,carbon,glass,brake,suit};
  box(body,carbon,[1.48,.12,2.8],[0,.35,0]);

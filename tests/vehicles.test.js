@@ -1,8 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {buildVehicle} from '../src/vehicles.js';
+import {buildVehicle,VEHICLE_SCALE} from '../src/vehicles.js';
+import {KART_RADIUS} from '../src/simulation.js';
 import {CARS} from '../src/car-catalog.js';
+
+test('kart model and collision footprint use the approved miniature scale',()=>{assert.equal(VEHICLE_SCALE,.65);assert.equal(KART_RADIUS,.56);const {group}=buildVehicle();assert.equal(group.scale.x,.65);assert.equal(group.scale.y,.65);assert.equal(group.scale.z,.65);});
 
 test('five finite, distinct car bodies retain animated steering and wheel roll pivots',()=>{
  const signatures=[];

@@ -80,7 +80,7 @@ test('all eight forward gates record a lap, the next crossing alone cannot finis
 test('stack and stair collisions push a kart outside solid furniture without health damage', () => {
  const w = active(); const p = w.players[0];
  Object.assign(p, { x: -3, z: 0, vx: 15, vz: 0 }); stepWorld(w, 1 / 60);
- assert.ok(p.x <= -12.8 || p.x >= 6.8 || Math.abs(p.z) >= 23.8);
+ assert.ok(p.x <= -12.5 || p.x >= 6.5 || Math.abs(p.z) >= 23.5);
  assert.equal('health' in p, false);
 });
 

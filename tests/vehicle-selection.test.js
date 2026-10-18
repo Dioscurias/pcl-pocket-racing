@@ -7,7 +7,7 @@ test('selected car survives host snapshots and rematches with the same shared pa
  const host=addPlayer(world,'host','Nico',{car:'roadster'});
  const guest=addPlayer(world,'guest','Maya',{car:'coupe'});
  assert.equal(host.car,'roadster');assert.equal(guest.car,'coupe');
- assert.equal(host.color,0x1859b7);assert.notEqual(host.color,guest.color);
+ assert.equal(host.color,0x1677ff);assert.notEqual(host.color,guest.color);
  startMatch(world);resetMatch(world);
  assert.deepEqual(snapshot(world).players.map(p=>[p.car,p.color]),[['roadster',host.color],['coupe',guest.color]]);
 });
