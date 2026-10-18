@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, addPlayer, setInput, startMatch, stepWorld, resetMatch, snapshot, botInput } from '../src/simulation.js';
-import { CHECKPOINTS, TRACK_LENGTH, pointAtDistance, surfaceAt } from '../src/track-layout.js';
+import { CHECKPOINTS, TRACK_LENGTH, ITEM_BOXES, pointAtDistance, surfaceAt } from '../src/track-layout.js';
 const advance = (w, seconds) => { for (let t = 0; t < seconds; t += 1 / 60) stepWorld(w, 1 / 60); };
 const active = options => { const w = createWorld({ bots: 0, ...options }); addPlayer(w, 'a', 'Ada'); startMatch(w); advance(w, 3.1); return w; };
 
@@ -82,4 +82,34 @@ test('stack and stair collisions push a kart outside solid furniture without hea
  Object.assign(p, { x: -3, z: 0, vx: 15, vz: 0 }); stepWorld(w, 1 / 60);
  assert.ok(p.x <= -12.8 || p.x >= 6.8 || Math.abs(p.z) >= 23.8);
  assert.equal('health' in p, false);
+});
+
+
+test('drifts charge through three tiers and release a stronger tier boost', () => {
+ const w = active(); const p = w.players[0];
+ Object.assign(p, {x:-82,z:-25,heading:0,vz:-24,speed:24,drift:89});
+ setInput(w,p.id,{throttle:1,steer:.7,drift:true});advance(w,.1);
+ assert.equal(p.driftTier,3);
+ setInput(w,p.id,{throttle:1,drift:false});stepWorld(w,1/60);
+ assert.ok(p.turboUntil-w.time>=1.7);
+ assert.ok(w.effects.some(e=>e.type==='drift-boost'&&e.tier===3));
+});
+
+test('item boxes award library items and activation is host-authoritative and serializable', () => {
+ const w=active();const p=w.players[0],box=ITEM_BOXES[0];
+ Object.assign(p,{x:box.x,z:box.z,y:0});stepWorld(w,1/60);
+ assert.ok(['sprint','shield','books','ink','cart'].includes(p.item));
+ p.item='sprint';setInput(w,p.id,{throttle:1,item:true});stepWorld(w,1/60);
+ assert.equal(p.item,null);assert.ok(p.turboUntil>w.time+1.5);
+ const state=snapshot(w);assert.ok(Array.isArray(state.hazards));assert.ok(Array.isArray(state.projectiles));
+});
+
+test('book and ink hazards disrupt rivals while a citation shield absorbs one hit', () => {
+ const w=active();const a=w.players[0],b=addPlayer(w,'b','Bee');
+ const road=pointAtDistance(40);Object.assign(a,{x:road.x,z:road.z,heading:road.heading,item:'books'});setInput(w,a.id,{item:true});stepWorld(w,1/60);
+ assert.equal(w.hazards.length,1);Object.assign(b,{x:w.hazards[0].x,z:w.hazards[0].z,vx:20,vz:0});stepWorld(w,1/60);
+ assert.ok(b.stunnedUntil>w.time);assert.equal(w.hazards.length,0);
+ Object.assign(a,{item:'shield'});setInput(w,a.id,{item:false});stepWorld(w,1/60);setInput(w,a.id,{item:true});stepWorld(w,1/60);
+ assert.ok(a.shieldUntil>w.time);w.hazards.push({id:'test',type:'ink',x:a.x,z:a.z,owner:'b',expires:w.time+10});stepWorld(w,1/60);
+ assert.equal(a.stunnedUntil??0,0);assert.ok(a.shieldUntil<=w.time);
 });

@@ -36,6 +36,7 @@ export const STACKS=[
 export const OBSTACLES=[{type:'stairs',label:'Central stair core',x:-3,z:0,w:18,d:46,height:9},...STACKS.map(s=>({...s,type:'stack',height:11})),{type:'admin',label:'Administration',x:-50,z:15,w:20,d:16,height:12}];
 export const RAMPS=[{x:90,z:-1,width:8,length:20,height:3.2,heading:Math.PI}];
 export const BOOSTS=[{...pointAtDistance(TRACK_LENGTH*.19),width:6,length:8},{...pointAtDistance(TRACK_LENGTH*.69),width:6,length:8}];
+export const ITEM_BOXES=[.08,.27,.46,.65,.84].map((ratio,index)=>({...pointAtDistance(TRACK_LENGTH*ratio),id:`item-${index}`}));
 export const SHORTCUTS=[{points:[{x:76,z:54},{x:25,z:60},{x:-14,z:65}],width:7,label:'Reading table shortcut'}];
 export const FLOOR_OUTLINE=[[-99,-72],[-79,-85],[73,-85],[100,-57],[100,54],[84,85],[8,87],[-32,75],[-67,51],[-100,17],[-100,-49]].map(([x,z])=>({x,z}));
 // Number in gameplay units. A ramp rises along its heading; its far edge drops to floor.

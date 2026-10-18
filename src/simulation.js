@@ -1,17 +1,18 @@
-import { TRACK_LENGTH, TRACK_WIDTH, CHECKPOINTS, OBSTACLES, BOOSTS, SHORTCUTS, nearestTrack, pointAtDistance, surfaceAt, insideFloor } from './track-layout.js';
+import { TRACK_LENGTH, TRACK_WIDTH, CHECKPOINTS, OBSTACLES, BOOSTS, ITEM_BOXES, SHORTCUTS, nearestTrack, pointAtDistance, surfaceAt, insideFloor } from './track-layout.js';
 import {CARS,normalizeCar} from './car-catalog.js';
 export const KART_RADIUS = .85;
 export const PLAYER_COLORS = [0x1859b7,0xd8b35f,0xd65543,0x59b7a6,0x9e84d4,0xe5e0ce,0x79ad51,0xc96594];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),finite=(v,f=0)=>Number.isFinite(v)?v:f,angle=v=>Math.atan2(Math.sin(v),Math.cos(v));
-const emptyInput=()=>({throttle:0,steer:0,drift:false,boost:false,reset:false});
+const emptyInput=()=>({throttle:0,steer:0,drift:false,boost:false,item:false,reset:false});
+export const ITEMS=Object.freeze(['sprint','shield','books','ink','cart']);
 export function createWorld(options={}){
  const o=options.settings||options,mode=o.mode==='time-trial'?'time-trial':'race';
- return{phase:'lobby',time:0,countdown:0,players:[],effects:[],effectSerial:0,settings:{mode,laps:mode==='time-trial'?1:clamp(Math.floor(finite(o.laps,3)),1,9),bots:mode==='time-trial'?0:clamp(Math.floor(finite(o.bots,3)),0,7)},winner:null,round:0,raceStart:0,finishDeadline:null,remaining:null,_inputs:{}};
+ return{phase:'lobby',time:0,countdown:0,players:[],effects:[],effectSerial:0,hazards:[],projectiles:[],itemSerial:0,settings:{mode,laps:mode==='time-trial'?1:clamp(Math.floor(finite(o.laps,3)),1,9),bots:mode==='time-trial'?0:clamp(Math.floor(finite(o.bots,3)),0,7)},winner:null,round:0,raceStart:0,finishDeadline:null,remaining:null,_inputs:{}};
 }
-function emit(w,type,p){w.effects.push({id:++w.effectSerial,type,x:p.x,y:p.y,z:p.z,time:w.time,playerId:p.id});if(w.effects.length>70)w.effects.shift();}
+function emit(w,type,p){w.effects.push({id:++w.effectSerial,type,x:p.x,y:p.y,z:p.z,time:w.time,playerId:p.id,tier:p.tier||0,item:p.item||null});if(w.effects.length>70)w.effects.shift();}
 function spawn(w,p,index=w.players.indexOf(p)){
  const origin=pointAtDistance(-3-Math.floor(index/2)*4),side=index%2?1.8:-1.8;
- Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,turboUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,penalty:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_stuck:0});
+ Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,penalty:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_itemHeld:false,_driftHeld:false,_stuck:0});
  p.y=surfaceAt(p.x,p.z);p.input=emptyInput();w._inputs[p.id]=p.input;
 }
 export function addPlayer(w,id,name,{bot=false,car}={}){
@@ -21,7 +22,7 @@ export function addPlayer(w,id,name,{bot=false,car}={}){
  w.players.push(p);spawn(w,p);return p;
 }
 export function removePlayer(w,id){w.players=w.players.filter(p=>p.id!==id);delete w._inputs[id];rank(w);}
-export function setInput(w,id,input={}){if(!input||typeof input!=='object'||Array.isArray(input))input={};const p=w.players.find(p=>p.id===id);if(!p)return;p.input={throttle:clamp(finite(input.throttle),-1,1),steer:clamp(finite(input.steer),-1,1),drift:input.drift===true,boost:input.boost===true,reset:input.reset===true};w._inputs[id]=p.input;}
+export function setInput(w,id,input={}){if(!input||typeof input!=='object'||Array.isArray(input))input={};const p=w.players.find(p=>p.id===id);if(!p)return;p.input={throttle:clamp(finite(input.throttle),-1,1),steer:clamp(finite(input.steer),-1,1),drift:input.drift===true,boost:input.boost===true,item:input.item===true,reset:input.reset===true};w._inputs[id]=p.input;}
 export function startMatch(w){
  if(w.phase==='playing'||w.phase==='countdown')return;
  if(w.settings.mode==='time-trial')w.players=w.players.filter(p=>!p.bot);
@@ -67,16 +68,46 @@ export function botInput(w,p){
  const desiredSpeed=bend>.9?15:bend>.5?20:28,throttle=p.speed>desiredSpeed?-.25:Math.abs(error)>1.2?.25:1;
  return{throttle,steer:clamp(error*1.65,-1,1),drift:Math.abs(error)>.22&&Math.abs(error)<.55&&p.speed>16&&near.distance<3,boost:bend<.22&&Math.abs(error)<.12&&p.energy>30,reset:false};
 }
+function driftTier(charge){return charge>=90?3:charge>=60?2:charge>=30?1:0;}
+function disrupt(w,p,type){
+ if(p.shieldUntil>w.time){p.shieldUntil=w.time;emit(w,'shield-break',p);return false;}
+ p.stunnedUntil=Math.max(p.stunnedUntil,w.time+(type==='ink'?1.1:1.45));p.vx*=.35;p.vz*=.35;emit(w,type==='ink'?'ink-hit':'item-hit',p);return true;
+}
+export function grantItem(w,p){
+ if(!p||p.item)return p?.item||null;
+ const pool=p.position>Math.ceil(w.players.length/2)?['sprint','sprint','shield','cart','ink']:['books','ink','shield','cart','sprint'];
+ p.item=pool[(w.itemSerial++ + p.lap + p.position)%pool.length];emit(w,'item',p);return p.item;
+}
+export function useItem(w,p){
+ const item=p?.item;if(!item)return false;p.item=null;
+ if(item==='sprint')p.turboUntil=Math.max(p.turboUntil,w.time+2.2);
+ else if(item==='shield')p.shieldUntil=w.time+6;
+ else if(item==='books'||item==='ink'){const back=2.3;w.hazards.push({id:`hazard-${++w.itemSerial}`,type:item,x:p.x-Math.sin(p.heading)*back,z:p.z+Math.cos(p.heading)*back,owner:p.id,expires:w.time+18});}
+ else if(item==='cart'){w.projectiles.push({id:`cart-${++w.itemSerial}`,type:'cart',x:p.x+Math.sin(p.heading)*2,z:p.z-Math.cos(p.heading)*2,vx:Math.sin(p.heading)*24,vz:-Math.cos(p.heading)*24,owner:p.id,expires:w.time+8});}
+ emit(w,'item-use',{...p,item});return true;
+}
+function updateItems(w,dt){
+ w.hazards=w.hazards.filter(h=>h.expires>w.time);
+ w.projectiles=w.projectiles.filter(q=>q.expires>w.time);
+ for(const q of w.projectiles){const candidates=w.players.filter(p=>p.id!==q.owner&&p.finishedAt===null),target=candidates.sort((a,b)=>Math.hypot(a.x-q.x,a.z-q.z)-Math.hypot(b.x-q.x,b.z-q.z))[0];if(target){const dx=target.x-q.x,dz=target.z-q.z,d=Math.max(.001,Math.hypot(dx,dz));q.vx+=(dx/d*28-q.vx)*Math.min(1,dt*1.8);q.vz+=(dz/d*28-q.vz)*Math.min(1,dt*1.8);}q.x+=q.vx*dt;q.z+=q.vz*dt;}
+ for(const p of w.players){
+  if(p.finishedAt!==null)continue;
+  for(const box of ITEM_BOXES)if(!p.item&&w.time-p._lastPickup>2&&Math.hypot(p.x-box.x,p.z-box.z)<2.5){p._lastPickup=w.time;grantItem(w,p);break;}
+  for(let i=w.hazards.length-1;i>=0;i--){const h=w.hazards[i];if(h.owner!==p.id&&Math.hypot(p.x-h.x,p.z-h.z)<1.55){disrupt(w,p,h.type);w.hazards.splice(i,1);}}
+  for(let i=w.projectiles.length-1;i>=0;i--){const q=w.projectiles[i];if(q.owner!==p.id&&Math.hypot(p.x-q.x,p.z-q.z)<1.7){disrupt(w,p,'cart');w.projectiles.splice(i,1);}}
+ }
+}
 function move(w,p,dt){
  if(p.bot)setInput(w,p.id,botInput(w,p));const input=p.input||emptyInput();p.steerVisual=input.steer;
- if(input.reset&&!p._resetHeld)resetKart(w,p);p._resetHeld=input.reset;
+ if(input.reset&&!p._resetHeld)resetKart(w,p);p._resetHeld=input.reset;if(input.item&&!p._itemHeld)useItem(w,p);p._itemHeld=input.item;
  const finished=p.finishedAt!==null,fx=Math.sin(p.heading),fz=-Math.cos(p.heading),rx=Math.cos(p.heading),rz=Math.sin(p.heading);
  let forward=p.vx*fx+p.vz*fz,side=p.vx*rx+p.vz*rz;
  const drifting=!finished&&input.drift&&Math.abs(input.steer)>.15&&Math.abs(forward)>8&&p.grounded;
- if(drifting)p.drift=clamp(p.drift+(32+Math.abs(input.steer)*16)*dt,0,100);
- if(p._wasDrifting&&!input.drift){if(p.drift>=35){p.turboUntil=w.time+1+Math.min(.6,(p.drift-35)/100);emit(w,'turbo',p);}p.drift=0;}
- if(!input.drift&&!p._wasDrifting)p.drift=0;p._wasDrifting=drifting;
- const boosting=!finished&&input.boost&&p.energy>0&&input.throttle>0&&p.grounded;
+ if(drifting){p.drift=clamp(p.drift+(38+Math.abs(input.steer)*20)*dt,0,100);p.driftTier=driftTier(p.drift);}
+ if(p._wasDrifting&&!input.drift){const tier=driftTier(p.drift);if(tier){p.turboUntil=Math.max(p.turboUntil,w.time+[0,.85,1.3,1.8][tier]);emit(w,'drift-boost',{...p,tier});}p.drift=0;p.driftTier=0;}
+ if(!input.drift&&!p._wasDrifting){p.drift=0;p.driftTier=0;}p._wasDrifting=drifting;
+ const stunned=p.stunnedUntil>w.time;if(stunned){input.throttle=0;input.steer*=.25;}
+ const boosting=!finished&&!stunned&&input.boost&&p.energy>0&&input.throttle>0&&p.grounded;
  p.boosting=boosting;p.energy=clamp(p.energy+(boosting?-35:8)*dt,0,100);
  const turbo=p.turboUntil>w.time;
  if(finished)forward*=Math.exp(-2*dt);
@@ -113,7 +144,7 @@ function advance(w,dt){
   const a=w.players[i],b=w.players[j];if(Math.abs(a.y-b.y)>1.8)continue;const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz),over=KART_RADIUS*2-d;if(over<=0)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;
   a.x-=nx*over*.51;a.z-=nz*over*.51;b.x+=nx*over*.51;b.z+=nz*over*.51;const closing=(b.vx-a.vx)*nx+(b.vz-a.vz)*nz;if(closing<0){a.vx+=nx*closing*.6;a.vz+=nz*closing*.6;b.vx-=nx*closing*.6;b.vz-=nz*closing*.6;}
  }
- rank(w);if(w.finishDeadline!==null){w.remaining=Math.max(0,w.finishDeadline-w.time);if(w.remaining===0||w.players.every(p=>p.finishedAt!==null)){w.phase='finished';w.countdown=0;w.winner=[...w.players].filter(p=>p.finishedAt!==null).sort((a,b)=>a.finishTime-b.finishTime)[0]?.id||null;}}
+ updateItems(w,dt);rank(w);if(w.finishDeadline!==null){w.remaining=Math.max(0,w.finishDeadline-w.time);if(w.remaining===0||w.players.every(p=>p.finishedAt!==null)){w.phase='finished';w.countdown=0;w.winner=[...w.players].filter(p=>p.finishedAt!==null).sort((a,b)=>a.finishTime-b.finishTime)[0]?.id||null;}}
 }
 export function stepWorld(w,dt){dt=clamp(finite(dt),0,.1);while(dt>1e-8){const h=Math.min(dt,1/120);advance(w,h);dt-=h;}}
 export function snapshot(w){const{_inputs,...visible}=w;return JSON.parse(JSON.stringify({...visible,players:w.players.map(p=>Object.fromEntries(Object.entries(p).filter(([key])=>!key.startsWith('_')&&key!=='input')))}));}
