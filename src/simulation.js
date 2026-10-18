@@ -15,10 +15,10 @@ function spawn(w,p,index=w.players.indexOf(p)){
  Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,penalty:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_itemHeld:false,_driftHeld:false,_stuck:0});
  p.y=surfaceAt(p.x,p.z);p.input=emptyInput();w._inputs[p.id]=p.input;
 }
-export function addPlayer(w,id,name,{bot=false,car}={}){
+export function addPlayer(w,id,name,{bot=false,car,color}={}){
  const existing=w.players.find(p=>p.id===id);if(existing)return existing;
  if(w.players.length>=8)return null;
- const p={id:String(id).slice(0,100),name:String(name||'Racer').replace(/[<>\u0000-\u001f]/g,'').trim().slice(0,20)||'Racer',color:PLAYER_COLORS.find(color=>!w.players.some(p=>p.color===color))??PLAYER_COLORS[w.players.length%PLAYER_COLORS.length],bot:!!bot,car:normalizeCar(car??(bot?CARS[w.players.length%CARS.length].id:undefined))};
+ const p={id:String(id).slice(0,100),name:String(name||'Racer').replace(/[<>\u0000-\u001f]/g,'').trim().slice(0,20)||'Racer',color:PLAYER_COLORS.includes(Number(color))?Number(color):(PLAYER_COLORS.find(value=>!w.players.some(p=>p.color===value))??PLAYER_COLORS[w.players.length%PLAYER_COLORS.length]),bot:!!bot,car:normalizeCar(car??(bot?CARS[w.players.length%CARS.length].id:undefined))};
  w.players.push(p);spawn(w,p);return p;
 }
 export function removePlayer(w,id){w.players=w.players.filter(p=>p.id!==id);delete w._inputs[id];rank(w);}
