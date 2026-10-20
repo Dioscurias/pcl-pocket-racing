@@ -1,4 +1,4 @@
-import {DEFAULT_TRACK,trackById,nearestTrack,pointAtDistance,surfaceAt,insideFloor,hazardPosition} from './tracks.js';
+import {DEFAULT_TRACK,trackById,nearestTrack,pointAtDistance,surfaceAt,insideFloor,hazardPosition,inFlightRange} from './tracks.js';
 import {CARS,normalizeCar} from './car-catalog.js';
 export const KART_RADIUS = .56;
 export const PLAYER_COLORS = [0x1677ff,0xffbf3f,0xff5a4d,0x18c7b5,0xa970ff,0xfff0c7,0x83d63f,0xf04fa3];
@@ -14,7 +14,7 @@ export function createWorld(options={}){
 function emit(w,type,p){w.effects.push({id:++w.effectSerial,type,x:p.x,y:p.y,z:p.z,time:w.time,playerId:p.id,tier:p.tier||0,item:p.item||null});if(w.effects.length>70)w.effects.shift();}
 function spawn(w,p,index=w.players.indexOf(p)){
  const track=course(w),origin=pointAtDistance(track,-3-Math.floor(index/2)*4),side=index%2?1.8:-1.8;
- Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,penalty:0,hazardHits:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_lastDynamic:-5,_itemHeld:false,_driftHeld:false,_stuck:0});
+ Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,gliding:false,penalty:0,hazardHits:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_lastDynamic:-5,_itemHeld:false,_driftHeld:false,_stuck:0});
  p.y=surfaceAt(track,p.x,p.z);p.input=emptyInput();w._inputs[p.id]=p.input;
 }
 export function addPlayer(w,id,name,{bot=false,car,color}={}){
@@ -33,7 +33,7 @@ export function startMatch(w){
  for(const p of w.players)spawn(w,p);
 }
 export function resetMatch(w){w.phase='lobby';w.countdown=0;w.winner=null;w.finishDeadline=null;w.remaining=null;w.effects=[];for(const p of w.players)spawn(w,p);}
-function resetKart(w,p){const track=course(w),gate=track.checkpoints[p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z);p.heading=gate.heading;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=0;emit(w,'reset',p);}
+function resetKart(w,p){const track=course(w),gate=track.checkpoints[p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z);p.heading=gate.heading;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.gliding=false;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=0;emit(w,'reset',p);}
 function distanceToSegment(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a.x-dx*t,z-a.z-dz*t);}
 function onShortcut(track,p){return track.shortcuts.some(s=>s.points.some((point,i)=>i&&distanceToSegment(p.x,p.z,s.points[i-1],point)<s.width/2));}
 function wallContacts(w,p){
@@ -118,18 +118,18 @@ function move(w,p,dt){
  forward*=Math.exp(-(Math.abs(input.throttle)>.01?.35:1.6)*dt);
  const track=course(w),near=nearestTrack(track,p.x,p.z),carpet=near.distance>track.trackWidth/2&&!onShortcut(track,p),cap=(boosting||turbo?42:32)*(carpet?.65:1);
  forward=clamp(forward,-9,cap);side*=Math.exp(-(drifting?3.8:13)*dt);
- const turnRate=2.55*clamp(Math.abs(forward)/10,0,1)*(drifting?1.12:1)*(forward<0?-1:1)*(p.grounded?1:.35);
+ const turnRate=2.55*clamp(Math.abs(forward)/10,0,1)*(drifting?1.12:1)*(forward<0?-1:1)*(p.grounded?1:p.gliding?.72:.35);
  if(!finished)p.heading=angle(p.heading+input.steer*turnRate*dt);
  // Preserve world momentum during steering, then dissipate lateral slip on the next frame.
  p.vx=fx*forward+rx*side;p.vz=fz*forward+rz*side;
  const ox=p.x,oz=p.z,oldSurface=surfaceAt(track,p.x,p.z);p.x+=p.vx*dt;p.z+=p.vz*dt;
- const surface=surfaceAt(track,p.x,p.z);
+ const landingNear=nearestTrack(track,p.x,p.z),flightArea=inFlightRange(track,landingNear.s),surface=surfaceAt(track,p.x,p.z);
  if(p.grounded){
-  if(oldSurface>1&&surface<oldSurface-.5&&forward>10){p.grounded=false;p.vy=6+Math.min(5,forward*.13);emit(w,'jump',p);}
+  if(oldSurface>1&&surface<oldSurface-.5&&forward>10){p.grounded=false;p.gliding=flightArea;p.vy=p.gliding?2.8:6+Math.min(5,forward*.13);if(p.gliding)forward=Math.max(forward,22);emit(w,p.gliding?'glide':'jump',p);}
   else if(surface-p.y<1){p.y=surface;}
   else{p.x=ox;p.z=oz;p.vx*=.1;p.vz*=.1;}
  }
- if(!p.grounded){p.vy-=27*dt;p.y+=p.vy*dt;if(p.y<=surface){p.y=surface;p.vy=0;p.grounded=true;emit(w,'land',p);}}
+ if(!p.grounded){p.gliding=p.gliding&&flightArea;p.vy-=(p.gliding?4.2:27)*dt;if(p.gliding)p.vy=Math.max(p.vy,-6.5);p.y+=p.vy*dt;if(p.y<=surface){p.y=surface;p.vy=0;p.grounded=true;p.gliding=false;emit(w,'land',p);}}
  wallContacts(w,p);
  for(const hazard of track.dynamicObstacles||[]){const position=hazardPosition(hazard,w.time),dx=p.x-position.x,dz=p.z-position.z,d=Math.hypot(dx,dz),limit=KART_RADIUS+hazard.radius;if(d>=limit||w.time-p._lastDynamic<.75)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;p.x=position.x+nx*(limit+.05);p.z=position.z+nz*(limit+.05);p.vx=nx*Math.max(4,p.speed*.38);p.vz=nz*Math.max(4,p.speed*.38);p.hazardHits++;p._lastDynamic=w.time;emit(w,'bump',p);}
  if(!insideFloor(track,p.x,p.z)||p.y< -5||!Number.isFinite(p.x+p.z+p.y))resetKart(w,p);
