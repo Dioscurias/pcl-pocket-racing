@@ -25,6 +25,24 @@ test('Jester course has real vertical progression and a kite flight sector',()=>
  assert.ok(track.flightRanges.length>=1);assert.ok(track.landmarks.some(item=>item.name==='J2 Dining'));assert.ok(track.landmarks.some(item=>item.name==='Jester City Market'));
 });
 
+test('J2 deck and furniture share one collision model while the concourse remains below',()=>{
+ const track=trackById('jester-vertical-drop');
+ assert.equal(surfaceAt(track,30,0),20.7);assert.equal(surfaceAt(track,30,0,0),0);
+ for(const obstacle of track.obstacles.filter(item=>(item.y||0)>10)){
+  const clearance=Math.min(...track.centerline.filter(point=>(point.y||0)>18).map(point=>Math.hypot(point.x-obstacle.x,point.z-obstacle.z)));
+  assert.ok(clearance>Math.max(obstacle.w,obstacle.d)/2+track.trackWidth/2,`${obstacle.label} blocks the upper racing line`);
+ }
+});
+
+test('lobby shortcut clears the checkout desk',()=>{
+ const track=trackById('pcl-lobby-loop'),desk=track.obstacles.find(item=>item.type==='reception'),shortcut=track.shortcuts[0];
+ for(let segment=1;segment<shortcut.points.length;segment++)for(let step=0;step<=20;step++){
+  const t=step/20,a=shortcut.points[segment-1],b=shortcut.points[segment],x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+  const dx=Math.max(Math.abs(x-desk.x)-desk.w/2,0),dz=Math.max(Math.abs(z-desk.z)-desk.d/2,0);
+  assert.ok(Math.hypot(dx,dz)>shortcut.width/2,`shortcut clips checkout desk at ${x},${z}`);
+ }
+});
+
 test('Jester launch deploys the kite and lands the kart at market level',()=>{
  const world=createWorld({trackId:'jester-vertical-drop',laps:1,bots:0}),player=addPlayer(world,'pilot','Pilot');startMatch(world);
  for(let i=0;i<400;i++)stepWorld(world,1/60);
@@ -38,4 +56,18 @@ test('AI can complete the new PCL Lobby Loop using its real checkpoints',()=>{
  addPlayer(world,'lobby-bot','Lobby Bot',{bot:true});startMatch(world);
  for(let i=0;i<60*180&&world.phase!=='finished';i++)stepWorld(world,1/60);
  assert.equal(world.players[0].lap,1);assert.ok(world.players[0].finishTime>0);
+});
+
+
+test('every published track can finish a clean AI lap without checkpoint resets',()=>{
+ for(const track of TRACKS){
+  const world=createWorld({trackId:track.id,laps:1,bots:0}),racer=addPlayer(world,'driver','Driver',{bot:true});startMatch(world);
+  let flew=false;for(let i=0;i<60*150&&racer.lap<1;i++){stepWorld(world,1/60);flew||=racer.gliding;}
+  assert.equal(racer.lap,1,track.id+' must be a finishable circuit');assert.equal(racer.penalty,0,track.id+' must not need resets');
+  if(track.flightRanges?.length)assert.equal(flew,true,'the upper route must launch into a real glide');
+ }
+});
+
+test('all published track surfaces stay above the floor and inside the building',()=>{
+ for(const track of TRACKS)for(const point of track.centerline){assert.ok((point.y||0)>=0,track.id+' dips through floor');assert.ok(insideFloor(track,point.x,point.z),track.id+' leaves the building');}
 });

@@ -15,7 +15,7 @@ function emit(w,type,p){w.effects.push({id:++w.effectSerial,type,x:p.x,y:p.y,z:p
 function spawn(w,p,index=w.players.indexOf(p)){
  const track=course(w),origin=pointAtDistance(track,-3-Math.floor(index/2)*4),side=index%2?1.8:-1.8;
  Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,gliding:false,penalty:0,hazardHits:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_lastDynamic:-5,_itemHeld:false,_driftHeld:false,_stuck:0});
- p.y=surfaceAt(track,p.x,p.z);p.input=emptyInput();w._inputs[p.id]=p.input;
+ p.y=surfaceAt(track,p.x,p.z,origin.y||0);p.input=emptyInput();w._inputs[p.id]=p.input;
 }
 export function addPlayer(w,id,name,{bot=false,car,color}={}){
  const existing=w.players.find(p=>p.id===id);if(existing)return existing;
@@ -33,12 +33,12 @@ export function startMatch(w){
  for(const p of w.players)spawn(w,p);
 }
 export function resetMatch(w){w.phase='lobby';w.countdown=0;w.winner=null;w.finishDeadline=null;w.remaining=null;w.effects=[];for(const p of w.players)spawn(w,p);}
-function resetKart(w,p){const track=course(w),gate=track.checkpoints[p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z);p.heading=gate.heading;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.gliding=false;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=0;emit(w,'reset',p);}
+function resetKart(w,p){const track=course(w),gate=track.checkpoints[inFlightRange(track,track.checkpoints[p.lastCheckpoint].s)?Math.max(0,p.lastCheckpoint-2):p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z,gate.y||0);p.heading=gate.heading;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.gliding=false;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=0;emit(w,'reset',p);}
 function distanceToSegment(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a.x-dx*t,z-a.z-dz*t);}
 function onShortcut(track,p){return track.shortcuts.some(s=>s.points.some((point,i)=>i&&distanceToSegment(p.x,p.z,s.points[i-1],point)<s.width/2));}
 function wallContacts(w,p){
  for(const box of course(w).obstacles){
-  if(p.y>(box.height||10))continue;
+  if(p.y>(box.y||0)+(box.height||10)||p.y+1.2<(box.y||0))continue;
   const cx=clamp(p.x,box.x-box.w/2,box.x+box.w/2),cz=clamp(p.z,box.z-box.d/2,box.z+box.d/2),dx=p.x-cx,dz=p.z-cz,d=Math.hypot(dx,dz);
   if(d>=KART_RADIUS)continue;
   let nx,nz,depth;
@@ -94,7 +94,7 @@ function updateItems(w,dt){
  for(const q of w.projectiles){const candidates=w.players.filter(p=>p.id!==q.owner&&p.finishedAt===null),target=candidates.sort((a,b)=>Math.hypot(a.x-q.x,a.z-q.z)-Math.hypot(b.x-q.x,b.z-q.z))[0];if(target){const dx=target.x-q.x,dz=target.z-q.z,d=Math.max(.001,Math.hypot(dx,dz));q.vx+=(dx/d*28-q.vx)*Math.min(1,dt*1.8);q.vz+=(dz/d*28-q.vz)*Math.min(1,dt*1.8);}q.x+=q.vx*dt;q.z+=q.vz*dt;}
  for(const p of w.players){
   if(p.finishedAt!==null)continue;
-  for(const box of course(w).itemBoxes)if(!p.item&&w.time-p._lastPickup>2&&Math.hypot(p.x-box.x,p.z-box.z)<2.5){p._lastPickup=w.time;grantItem(w,p);break;}
+  for(const box of course(w).itemBoxes)if(!p.item&&Math.abs(p.y-(box.y||0))<3&&w.time-p._lastPickup>2&&Math.hypot(p.x-box.x,p.z-box.z)<2.5){p._lastPickup=w.time;grantItem(w,p);break;}
   for(let i=w.hazards.length-1;i>=0;i--){const h=w.hazards[i];if(h.owner!==p.id&&Math.hypot(p.x-h.x,p.z-h.z)<1.55){disrupt(w,p,h.type);w.hazards.splice(i,1);}}
   for(let i=w.projectiles.length-1;i>=0;i--){const q=w.projectiles[i];if(q.owner!==p.id&&Math.hypot(p.x-q.x,p.z-q.z)<1.7){disrupt(w,p,'cart');w.projectiles.splice(i,1);}}
  }
@@ -118,12 +118,12 @@ function move(w,p,dt){
  forward*=Math.exp(-(Math.abs(input.throttle)>.01?.35:1.6)*dt);
  const track=course(w),near=nearestTrack(track,p.x,p.z),carpet=near.distance>track.trackWidth/2&&!onShortcut(track,p),cap=(boosting||turbo?42:32)*(carpet?.65:1);
  forward=clamp(forward,-9,cap);side*=Math.exp(-(drifting?3.8:13)*dt);
- const turnRate=2.55*clamp(Math.abs(forward)/10,0,1)*(drifting?1.12:1)*(forward<0?-1:1)*(p.grounded?1:p.gliding?.72:.35);
+ const turnRate=2.55*clamp(Math.abs(forward)/10,0,1)*(drifting?1.12:1)*(forward<0?-1:1)*(p.grounded?1:p.gliding?.92:.35);
  if(!finished)p.heading=angle(p.heading+input.steer*turnRate*dt);
  // Preserve world momentum during steering, then dissipate lateral slip on the next frame.
  p.vx=fx*forward+rx*side;p.vz=fz*forward+rz*side;
- const ox=p.x,oz=p.z,oldSurface=surfaceAt(track,p.x,p.z);p.x+=p.vx*dt;p.z+=p.vz*dt;
- const landingNear=nearestTrack(track,p.x,p.z),flightArea=inFlightRange(track,landingNear.s),surface=surfaceAt(track,p.x,p.z);
+ const ox=p.x,oz=p.z,oldSurface=surfaceAt(track,p.x,p.z,p.y);p.x+=p.vx*dt;p.z+=p.vz*dt;
+ const landingNear=nearestTrack(track,p.x,p.z),flightArea=inFlightRange(track,landingNear.s),surface=surfaceAt(track,p.x,p.z,p.y);
  if(p.grounded){
   if(oldSurface>1&&surface<oldSurface-.5&&forward>10){p.grounded=false;p.gliding=flightArea;p.vy=p.gliding?2.8:6+Math.min(5,forward*.13);if(p.gliding)forward=Math.max(forward,22);emit(w,p.gliding?'glide':'jump',p);}
   else if(surface-p.y<1){p.y=surface;}
@@ -131,7 +131,7 @@ function move(w,p,dt){
  }
  if(!p.grounded){p.gliding=p.gliding&&flightArea;p.vy-=(p.gliding?4.2:27)*dt;if(p.gliding)p.vy=Math.max(p.vy,-6.5);p.y+=p.vy*dt;if(p.y<=surface){p.y=surface;p.vy=0;p.grounded=true;p.gliding=false;emit(w,'land',p);}}
  wallContacts(w,p);
- for(const hazard of track.dynamicObstacles||[]){const position=hazardPosition(hazard,w.time),dx=p.x-position.x,dz=p.z-position.z,d=Math.hypot(dx,dz),limit=KART_RADIUS+hazard.radius;if(d>=limit||w.time-p._lastDynamic<.75)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;p.x=position.x+nx*(limit+.05);p.z=position.z+nz*(limit+.05);p.vx=nx*Math.max(4,p.speed*.38);p.vz=nz*Math.max(4,p.speed*.38);p.hazardHits++;p._lastDynamic=w.time;emit(w,'bump',p);}
+ for(const hazard of track.dynamicObstacles||[]){const position=hazardPosition(hazard,w.time),dx=p.x-position.x,dz=p.z-position.z,d=Math.hypot(dx,dz),limit=KART_RADIUS+hazard.radius;if(d>=limit||Math.abs(p.y-(hazard.y||0))>3||w.time-p._lastDynamic<.75)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;p.x=position.x+nx*(limit+.05);p.z=position.z+nz*(limit+.05);p.vx=nx*Math.max(4,p.speed*.38);p.vz=nz*Math.max(4,p.speed*.38);p.hazardHits++;p._lastDynamic=w.time;emit(w,'bump',p);}
  if(!insideFloor(track,p.x,p.z)||p.y< -5||!Number.isFinite(p.x+p.z+p.y))resetKart(w,p);
  p.speed=Math.hypot(p.vx,p.vz);
  for(const pad of track.boostPads){const dx=p.x-pad.x,dz=p.z-pad.z,f=dx*Math.sin(pad.heading)-dz*Math.cos(pad.heading),r=dx*Math.cos(pad.heading)+dz*Math.sin(pad.heading);if(Math.abs(f)<pad.length/2&&Math.abs(r)<pad.width/2&&p.grounded&&w.time-p._lastBoost>2){p.turboUntil=w.time+1.5;p._lastBoost=w.time;emit(w,'boost',p);}}
