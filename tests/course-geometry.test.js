@@ -16,3 +16,12 @@ test('visible roads stop before flight sectors and reconnect at market level',()
  for(const section of sections)for(const p of section)assert.equal(inFlightRange(t,p.s),false);
  assert.ok(sections[0].at(-1).y>20);assert.ok(sections[1][0].y<1);
 });
+
+test('UT Grand Prix road spans one connected campus with authored landmarks',()=>{
+ const track=TRACKS.find(item=>item.id==='ut-campus-grand-prix'),sections=roadSections(track);
+ assert.equal(sections.length,2,'the only break in the racing ribbon is the kite flight');
+ assert.deepEqual(track.structures.map(item=>item.id),['pcl','tower','gregory','jester']);
+ for(const structure of track.structures)assert.ok(Number.isFinite(structure.x+structure.z+structure.w+structure.d),structure.id);
+ assert.ok(sections.flat().some(point=>point.z<-240),'course must reach the Main Mall and Tower');
+ assert.ok(track.centerline.some(point=>point.z>200),'course must reach the Jester market side');
+});

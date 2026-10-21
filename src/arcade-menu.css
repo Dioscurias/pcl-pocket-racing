@@ -8,7 +8,8 @@
 .menu-edition{font:700 10px var(--body);letter-spacing:.14em;color:#536d8a}
 #front .text-button{color:var(--menu-ink);border-color:#21375d44;font-weight:700}
 #home-panel{width:min(1320px,94%);margin:0 auto;padding:0 0 20px;background:none;border:0;border-radius:0;box-shadow:none;backdrop-filter:none}
-.menu-title{display:flex;align-items:center;justify-content:space-between;padding:25px 0 26px;gap:25px}
+.menu-title{display:flex;align-items:center;justify-content:space-between;padding:25px 0 34px;gap:25px;position:relative}
+.menu-title::after{content:'';position:absolute;left:0;right:0;bottom:12px;height:8px;background:repeating-conic-gradient(#20395e 0 25%,#fff9e8 0 50%) 0/16px 16px;transform:skewX(-18deg);box-shadow:0 2px 0 #f4b82d}
 .title-lockup{display:flex;align-items:center;gap:17px;transform:skew(-5deg)}
 .title-pcl{font:950 clamp(58px,7vw,92px)/.85 var(--display);font-style:italic;letter-spacing:-.06em;color:#ffd34a;-webkit-text-stroke:2px #263e64;paint-order:stroke fill;text-shadow:0 5px 0 #263e64,0 8px 0 #ef8c34}
 #home-panel h1{font:950 clamp(29px,3.4vw,48px)/.9 var(--display)!important;letter-spacing:-.035em;margin:0;color:var(--menu-ink);max-width:none;text-shadow:none}
@@ -46,10 +47,11 @@
 .racer-field label{font:800 12px var(--body);white-space:nowrap}
 .racer-field input{padding-right:30px;min-width:0}
 .racer-field>span{position:absolute;right:13px;bottom:14px;font-size:17px;color:#8493a2}
-#front .track-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px}
+#front .track-choice-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
 #front .track-choice{display:flex;flex-direction:column;position:relative;border:3px solid #fff;border-radius:14px;color:var(--menu-ink);background:#fffdf1;box-shadow:0 4px 0 #b2c3d1;overflow:visible;padding:0;min-width:0;transition:transform .18s ease,box-shadow .18s ease}
-#front .track-choice.selected{border-color:#f4bc2f;box-shadow:0 4px 0 #d58d21,0 0 0 1px #f4bc2f;transform:translateY(-3px)}
-#front .track-choice:hover{transform:translateY(-4px)}
+#front .track-choice:nth-child(odd){transform:rotate(-.7deg)}#front .track-choice:nth-child(even){transform:rotate(.7deg)}
+#front .track-choice.selected{border-color:#f4bc2f;box-shadow:0 6px 0 #d58d21,0 0 0 1px #f4bc2f;transform:translateY(-5px) rotate(0)}
+#front .track-choice:hover{transform:translateY(-5px) rotate(0)}
 #front .track-swatch{display:block;position:relative;overflow:hidden;width:100%;height:143px;border-radius:9px 9px 0 0;background:#b8d8de}
 .track-swatch img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .25s}
 .track-choice:hover .track-swatch img{transform:scale(1.04)}
@@ -79,7 +81,7 @@
 .mode-choices button.selected{border-color:#7399cc;background:#e4edfb;color:#244e84}
 #front .menu-actions{display:grid;grid-template-columns:1.1fr 1fr;gap:10px;margin-top:15px}
 #front .menu-actions .mr-btn{border:2px solid #fff;border-radius:13px;box-shadow:0 4px 0 #c3cfda;background:#346ed1;color:#fff;font:850 14px var(--body);padding:10px 16px;min-height:51px;letter-spacing:0;gap:5px}
-#front .menu-actions .start-race{background:#ffd448;color:#243957;box-shadow:0 4px 0 #d89c25;font:950 italic 21px var(--display);text-transform:uppercase}
+#front .menu-actions .start-race{background:#ffd448;color:#243957;box-shadow:0 5px 0 #d07320;font:950 italic 27px var(--display);text-transform:uppercase;clip-path:polygon(0 0,96% 0,100% 50%,96% 100%,0 100%,3% 50%)}
 #front .mr-btn:hover{filter:brightness(1.05);transform:translateY(-1px)}
 #front .join-row{display:flex;align-items:center;gap:9px;margin-top:18px}
 #front .join-row label{font:700 11px var(--body);color:#6c7e94;white-space:nowrap}
@@ -97,7 +99,7 @@
 #front td{border-color:#21375d22}
 #front :focus-visible{outline:3px solid #254b83;outline-offset:4px}
 @media(min-width:1500px){#front .garage{height:340px}#front .track-swatch{height:174px}.menu-title{padding:35px 0}.selection-grid{gap:36px}.course-summary{padding:24px 0}.race-setup{padding-top:24px}}
-@media(max-width:1050px){.selection-grid{grid-template-columns:minmax(290px,.8fr) minmax(410px,1.2fr);gap:18px}#home-panel{width:94%}#front .track-choice-grid{gap:7px}#front .track-swatch{height:120px}#front .track-choice strong{font-size:16px}#front .track-choice .track-caption{padding:10px 7px;min-height:98px}.panel-note{display:none}#front .garage{height:270px}#front .menu-edition{font-size:8px}.race-sticker{width:86px;height:65px;font-size:11px}.racer-field{grid-template-columns:1fr;gap:6px}#front .paint-row{gap:12px}#front .paint-choices{gap:6px}}
+@media(max-width:1050px){.selection-grid{grid-template-columns:minmax(290px,.8fr) minmax(410px,1.2fr);gap:18px}#home-panel{width:94%}#front .track-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}#front .track-swatch{height:105px}#front .track-choice strong{font-size:16px}#front .track-choice .track-caption{padding:8px 7px;min-height:80px}.panel-note{display:none}#front .garage{height:270px}#front .menu-edition{font-size:8px}.race-sticker{width:86px;height:65px;font-size:11px}.racer-field{grid-template-columns:1fr;gap:6px}#front .paint-row{gap:12px}#front .paint-choices{gap:6px}}
 @media(max-width:760px){#front .menu-edition{display:none}#front .menu-header{min-height:48px;padding:11px 5%}#home-panel{width:90%;padding-bottom:25px}.menu-title{padding:24px 0 27px}.title-pcl{font-size:64px}#home-panel h1{font-size:30px!important}#home-panel h1>span{font-size:7px;letter-spacing:.1em;margin-top:10px}.race-sticker{display:none}.selection-grid{grid-template-columns:1fr;gap:30px}#front .garage{height:270px}#front .car-choice{height:64px}#front .paint-row{margin:18px 0}#front .paint-choices{justify-content:flex-end;gap:13px}.racer-field{grid-template-columns:auto 1fr}#front .track-swatch{height:130px}#front .track-choice .track-caption{min-height:105px}#front .menu-footer{display:flex;align-items:center;gap:18px;padding:16px 5%}#front .menu-footer>span{font-size:9px;line-height:1.6}.course-summary{min-height:70px}.garage-number{font-size:65px}#front .garage-copy strong{font-size:25px}}
 @media(max-width:420px){.title-pcl{font-size:55px}#home-panel h1{font-size:25px!important}.title-lockup{gap:12px}#front .garage{height:240px}#front .car-choice span{font-size:8px}.car-choice-shape{transform:scale(.87)}#front .paint-choices{gap:9px}#front .paint-choice{width:23px;height:23px}#home-panel .selection-heading h2{font-size:22px}#front .track-swatch{height:105px}#front .track-choice-grid{gap:7px}#front .track-choice strong{font-size:16px}#front .track-choice small{font-size:7px}#front .track-choice .track-caption{padding:9px 6px;min-height:104px}.course-route{width:40px;height:40px}.track-number{font-size:17px}#front .menu-actions{grid-template-columns:1fr}#front .join-row{gap:6px}#front .menu-footer{align-items:start}#front .menu-footer>div{gap:14px}}
 @media(prefers-reduced-motion:reduce){#front *,#front *::before,#front *::after{transition:none!important;animation:none!important}}

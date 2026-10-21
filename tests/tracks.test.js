@@ -19,6 +19,37 @@ test('track catalog contains distinct complete selectable circuits',()=>{
  assert.notDeepEqual(hazardPosition(hazards[0],0),hazardPosition(hazards[0],1));
 });
 
+test('UT Grand Prix connects PCL, central campus and Jester in landmark order',()=>{
+ const track=TRACKS.find(item=>item.id==='ut-campus-grand-prix');
+ assert.ok(track,'UT Grand Prix must be selectable');assert.equal(track.environment,'UT Austin campus');
+ assert.deepEqual(track.zones.map(zone=>zone.id),['pcl','campus','jester']);
+ assert.deepEqual(track.landmarks.map(item=>item.name),['PCL Level 2','PCL Main Entry','Speedway','UT Tower','Main Mall','Gregory Gym','Jester Circle','JCL','J2 Dining','Kite Launch','Jester City Market']);
+ assert.ok(track.length>1200,'grand tour must be substantially larger than the indoor courses');
+ assert.ok(track.flightRanges.length===1);assert.ok(track.platforms.length>=1);
+ for(const point of track.centerline)assert.equal(insideFloor(track,point.x,point.z),true,'the connected route must remain inside the authored campus bounds');
+});
+
+test('an AI racer completes UT Grand Prix without reset penalties',()=>{
+ const world=createWorld({trackId:'ut-campus-grand-prix',laps:1,bots:0}),racer=addPlayer(world,'campus-bot','Campus Bot',{bot:true});startMatch(world);
+ assert.equal(world.trackId,'ut-campus-grand-prix');
+ for(let i=0;i<60*240&&racer.lap<1;i++)stepWorld(world,1/60);
+ assert.equal(racer.lap,1);assert.equal(racer.penalty,0);
+});
+
+test('UT Grand Prix shortcuts clear solids and landmark ratios match the visible campus',()=>{
+ const track=trackById('ut-campus-grand-prix');
+ for(const shortcut of track.shortcuts)for(let segment=1;segment<shortcut.points.length;segment++)for(let step=0;step<=20;step++){
+  const t=step/20,a=shortcut.points[segment-1],b=shortcut.points[segment],x=a.x+(b.x-a.x)*t,z=a.z+(b.z-a.z)*t;
+  for(const obstacle of track.obstacles.filter(item=>Math.abs((item.y||0)-(a.y||0))<3)){
+   const dx=Math.max(Math.abs(x-obstacle.x)-obstacle.w/2,0),dz=Math.max(Math.abs(z-obstacle.z)-obstacle.d/2,0);
+   assert.ok(Math.hypot(dx,dz)>shortcut.width/2,`${shortcut.label} clips ${obstacle.label}`);
+  }
+ }
+ const targets={Speedway:[-140,-25],'UT Tower':[5,-286],'Main Mall':[38,-245],'Gregory Gym':[183,-5],'Jester Circle':[151,92]};
+ for(const [name,[x,z]] of Object.entries(targets)){const landmark=track.landmarks.find(item=>item.name===name),point=pointAtDistance(track,track.length*landmark.ratio);assert.ok(Math.hypot(point.x-x,point.z-z)<55,`${name} announcement is detached from its landmark`);}
+ assert.ok(track.obstacles.some(item=>item.id==='tower-solid'));assert.ok(track.obstacles.some(item=>item.id==='gregory-solid'));
+});
+
 test('Jester course has real vertical progression and a kite flight sector',()=>{
  const track=trackById('jester-vertical-drop');assert.equal(track.environment,'Jester Center');
  const heights=track.centerline.map(point=>point.y||0);assert.ok(Math.max(...heights)>=20);
