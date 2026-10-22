@@ -13,7 +13,7 @@ function rod(g,a,b,r,color){const av=new THREE.Vector3(...a),bv=new THREE.Vector
 function sign(g,text,x,y,z,width=15,heading=0,{bg='#fff8df',fg='#183457',height=3}={}){const c=document.createElement('canvas');c.width=1024;c.height=256;const ctx=c.getContext('2d');ctx.fillStyle=bg;ctx.fillRect(0,0,1024,256);ctx.fillStyle=fg;ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='900 105px "Inter Tight",Arial';ctx.fillText(text,512,135,950);const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;const m=part(g,new THREE.PlaneGeometry(width,height),new THREE.MeshBasicMaterial({map,side:THREE.DoubleSide}),x,y,z);m.rotation.y=heading;m.castShadow=false;return m;}
 function floorTexture(){const canvas=document.createElement('canvas');canvas.width=canvas.height=256;const ctx=canvas.getContext('2d');ctx.fillStyle='#e9dec5';ctx.fillRect(0,0,256,256);for(let i=0;i<1800;i++){const n=(Math.sin(i*78.33)*43758.5)%1;ctx.fillStyle=i%3?'#d5c4a5':'#fff8e8';ctx.fillRect(Math.abs(n)*256,(i*73.17)%256,1.4,1.4);}ctx.strokeStyle='#c9b999';ctx.lineWidth=1;ctx.strokeRect(0,0,256,256);const texture=new THREE.CanvasTexture(canvas);texture.wrapS=texture.wrapT=THREE.RepeatWrapping;texture.repeat.set(.09,.09);texture.colorSpace=THREE.SRGBColorSpace;return texture;}
 
-export function ribbonGeometry(points,width,offset=.04){const positions=[],indices=[];for(let i=0;i<points.length;i++){const previous=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)],h=Math.atan2(next.x-previous.x,previous.z-next.z),dx=Math.cos(h)*width/2,dz=Math.sin(h)*width/2,p=points[i];positions.push(p.x-dx,(p.y||0)+offset,p.z-dz,p.x+dx,(p.y||0)+offset,p.z+dz);if(i){const a=(i-1)*2,b=i*2;indices.push(a,a+1,b+1,a,b+1,b);}}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();return g;}
+export function ribbonGeometry(points,width,offset=.04){const positions=[],indices=[];for(let i=0;i<points.length;i++){const previous=points[Math.max(0,i-1)],next=points[Math.min(points.length-1,i+1)],h=Math.atan2(next.x-previous.x,previous.z-next.z),dx=Math.cos(h)*width/2,dz=Math.sin(h)*width/2,p=points[i];positions.push(p.x-dx,(p.y||0)+offset,p.z-dz,p.x+dx,(p.y||0)+offset,p.z+dz);if(i){const a=(i-1)*2,b=i*2,ax=positions[a*3],az=positions[a*3+2],bx=positions[(a+1)*3],bz=positions[(a+1)*3+2],cx=positions[(b+1)*3],cz=positions[(b+1)*3+2],upward=(bz-az)*(cx-ax)-(bx-ax)*(cz-az)>=0;if(upward)indices.push(a,a+1,b+1,a,b+1,b);else indices.push(a,b+1,a+1,a,b,b+1);}}const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();const normals=g.attributes.normal;for(let i=0;i<normals.count;i++)if(normals.getY(i)<0)normals.setXYZ(i,-normals.getX(i),-normals.getY(i),-normals.getZ(i));normals.needsUpdate=true;return g;}
 export function roadSections(track){const sections=[];let active=[];for(let i=0;i<=track.centerline.length;i++){const p=track.centerline[i%track.centerline.length],flight=inFlightRange(track,p.s);if(flight){if(active.length>1)sections.push(active);active=[];}else active.push(p);}if(active.length>1)sections.push(active);return sections;}
 function routeTube(g,points,color,r=.08){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(p.x,(p.y||0)+.5,p.z)));part(g,new THREE.TubeGeometry(curve,Math.max(8,points.length),r,5,false),paint(color));}
 function buildRoad(g,track){for(const points of roadSections(track)){part(g,ribbonGeometry(points,track.trackWidth),paint(track.theme.track,.82)).castShadow=false;for(const side of [-1,1]){const edge=points.map((p,i)=>{const a=points[Math.max(0,i-1)],b=points[Math.min(points.length-1,i+1)],h=Math.atan2(b.x-a.x,a.z-b.z);return {...p,x:p.x+Math.cos(h)*track.trackWidth*.48*side,z:p.z+Math.sin(h)*track.trackWidth*.48*side};});routeTube(g,edge,'#fffdf0',.14);}}
@@ -67,7 +67,7 @@ function campusBuilding(g,structure,color='#c79a70'){
  for(let y=7;y<structure.height-2;y+=7)for(let x=structure.x-structure.w/2+5;x<structure.x+structure.w/2-3;x+=8){box(g,[4.8,3,.12],'#8eb8c1',[x,y,structure.z+structure.d/2+.08],0).castShadow=false;box(g,[4.8,3,.12],'#8eb8c1',[x,y,structure.z-structure.d/2-.08],0).castShadow=false;}
  sign(g,structure.label,structure.x,structure.height*.7,structure.z+structure.d/2+.18,Math.min(structure.w*.8,45),0,{bg:'#bf5700',fg:'#fff7df',height:4});
 }
-function campus(g,track){
+function legacyCampus(g,track){
  box(g,[560,.3,545],'#71a85e',[-65,-.2,-20],0).castShadow=false;
  // Speedway, Main Mall and 21st Street make the outdoor relationships readable.
  box(g,[26,.12,390],'#d9d0bd',[-140,.01,-52],0).castShadow=false;box(g,[270,.12,32],'#ded5c4',[0,.015,-240],0).castShadow=false;box(g,[350,.1,24],'#c8bda9',[-12,.02,148],0).castShadow=false;
@@ -89,6 +89,28 @@ function campus(g,track){
  for(const [x,z] of [[-174,-195],[-102,-160],[-84,-225],[-52,-181],[-15,-213],[54,-205],[88,-167],[121,-116],[119,-52],[-101,13],[-177,-12],[-169,76],[-104,91],[178,69],[188,-65]])campusTree(g,x,z,.85+((Math.abs(x+z)%4)*.08));
  for(let z=-205;z<120;z+=42){campusLamp(g,-154,z);campusLamp(g,-126,z);}for(let x=-100;x<120;x+=42){campusLamp(g,x,-256);}
  for(const [label,ratio] of [['SPEEDWAY',.27],['MAIN MALL',.44],['JESTER CIRCLE',.65]]){const p=pointAtDistance(track,track.length*ratio);sign(g,label,p.x,p.y+8,p.z,22,-p.heading,{bg:'#bf5700',fg:'#fff7df',height:3});}
+}
+function campus(g,track){
+ box(g,[480,.28,480],'#76b565',[-30,-.18,24],0).castShadow=false;
+ for(const [x,z,w,d] of [[-58,145,24,170],[18,214,150,18],[112,76,24,168],[70,-112,182,22],[-116,-112,218,22],[-220,-16,22,190],[-159,57,92,18]])box(g,[w,.08,d],'#ddd6c2',[x,.01,z],0).castShadow=false;
+ const creek=track.structures.find(item=>item.id==='waller');
+ if(creek)routeTube(g,[{x:creek.x-4,z:205},{x:creek.x+5,z:120},{x:creek.x-3,z:24},{x:creek.x+3,z:-65}], '#63b7cf',2.2);
+ for(const structure of track.structures){
+  if(structure.water)continue;
+  if(structure.id==='dkr'){
+   const bowl=part(g,new THREE.CylinderGeometry(1,1.05,20,28),paint('#b9b4a5'),structure.x,10,structure.z);bowl.scale.set(structure.w*.55,1,structure.d*.55);
+   const field=part(g,new THREE.BoxGeometry(structure.w*.68,.5,structure.d*.52),paint('#6cab57'),structure.x,20.2,structure.z);field.castShadow=false;
+   sign(g,'DKR STADIUM',structure.x,31,structure.z+structure.d*.58,34,0,{bg:'#f6f1df',fg:'#454a43'});
+  }else{
+   campusBuilding(g,structure,structure.id==='tower'?'#ece7da':structure.id==='pcl'?'#c9996e':'#c5ad8b');
+   if(structure.id==='tower'){rod(g,[structure.x,structure.height,structure.z],[structure.x,structure.height+15,structure.z],.16,'#f0e8d6');box(g,[5,3,5],'#bf5700',[structure.x,structure.height+2,structure.z],.08);}
+  }
+ }
+ for(const obstacle of track.obstacles.filter(item=>item.id?.startsWith('campus-tree')))campusTree(g,obstacle.x,obstacle.z,.95);
+ for(const [x,z] of [[-70,115],[-68,177],[88,130],[116,65],[113,-35],[54,-123],[-48,-124],[-205,-70],[-205,20],[-186,68],[-143,26]])campusLamp(g,x,z);
+ const streetSigns=[['SPEEDWAY',-43,150,Math.PI/2],['DEAN KEETON',15,226,0],['SAN JACINTO',126,72,-Math.PI/2],['23RD ST',126,22,0],['21ST ST',-62,-99,0],['GUADALUPE',-234,-28,Math.PI/2],['24TH ST',-202,112,0],['INNER CAMPUS DR',-130,3,0]];
+ for(const [label,x,z,heading] of streetSigns)sign(g,label,x,4,z,15,heading,{bg:'#f7f3e4',fg:'#37443c',height:2});
+ for(const landmark of track.landmarks){const p=pointAtDistance(track,track.length*landmark.ratio);if(['Speedway','DKR Stadium','Guadalupe'].includes(landmark.name))sign(g,landmark.name.toUpperCase(),p.x,7,p.z,18,-p.heading,{bg:'#bf5700',fg:'#fff7df',height:2.5});}
 }
 function ramp(g,r){const w=r.width,len=r.length,points=[{x:-w/2,y:0,z:len/2},{x:w/2,y:0,z:len/2},{x:w/2,y:r.height,z:-len/2},{x:-w/2,y:r.height,z:-len/2}],geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute([0,1,2,0,2,3].flatMap(i=>[points[i].x,points[i].y,points[i].z]),3));geo.computeVertexNormals();const group=new THREE.Group();group.position.set(r.x,r.y||0,r.z);group.rotation.y=-r.heading;g.add(group);part(group,geo,paint('#e4963b'));box(group,[w,.22,len],'#e1c98d',[0,.05,0],.08);}
 function start(g,track){const p=pointAtDistance(track,0),group=new THREE.Group();group.position.set(p.x,p.y,p.z);group.rotation.y=-p.heading;g.add(group);for(const side of [-1,1])box(group,[.5,7,.5],'#e6b631',[side*(track.trackWidth*.5+1),3.5,0]);box(group,[track.trackWidth+3.1,2,.5],'#f3b731',[0,7,0],.2);sign(group,track.id==='jester-vertical-drop'?'JESTER FLIGHT':track.id==='ut-campus-grand-prix'?'UT GRAND PRIX':'PCL POCKET RACING',0,7,.27,track.trackWidth+2,0,{bg:'#f3b731',fg:'#21385b',height:1.5});for(let x=0;x<12;x++)for(let z=0;z<3;z++)box(group,[track.trackWidth/12,.035,.7],(x+z)%2?'#fff4d6':'#243e63',[(x-5.5)*track.trackWidth/12,.08,(z-1)*.7],0);}

@@ -17,11 +17,12 @@ test('visible roads stop before flight sectors and reconnect at market level',()
  assert.ok(sections[0].at(-1).y>20);assert.ok(sections[1][0].y<1);
 });
 
-test('UT Grand Prix road spans one connected campus with authored landmarks',()=>{
+test('UT Grand Prix road is a continuous outdoor loop with campus landmarks',()=>{
  const track=TRACKS.find(item=>item.id==='ut-campus-grand-prix'),sections=roadSections(track);
- assert.equal(sections.length,2,'the only break in the racing ribbon is the kite flight');
- assert.deepEqual(track.structures.map(item=>item.id),['pcl','tower','gregory','jester']);
+ assert.equal(sections.length,1,'the outdoor route has no airborne break');
+ assert.deepEqual(track.structures.map(item=>item.id),['tower','pcl','dkr','lbj','mccombs','gregory','waller']);
  for(const structure of track.structures)assert.ok(Number.isFinite(structure.x+structure.z+structure.w+structure.d),structure.id);
- assert.ok(sections.flat().some(point=>point.z<-240),'course must reach the Main Mall and Tower');
- assert.ok(track.centerline.some(point=>point.z>200),'course must reach the Jester market side');
+ assert.equal(track.structures.find(item=>item.id==='waller').water,true);
+ assert.ok(sections.flat().some(point=>point.z<-150),'course must reach the 21st Street and DKR side');
+ assert.ok(track.centerline.some(point=>point.z>200),'course must reach Dean Keeton');
 });
