@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {curbSegments,ribbonGeometry,roadSections} from '../src/course-world.js';
+import {campusRaceDecor,curbSegments,ribbonGeometry,roadSections} from '../src/course-world.js';
 import {TRACKS,inFlightRange} from '../src/tracks.js';
 test('road has shared edges and upward-facing triangles instead of overlapping segment wedges',()=>{
  for(const t of TRACKS)for(const section of roadSections(t)){
@@ -44,5 +44,14 @@ test('UT Grand Prix trims curbs beside nonadjacent road sections',()=>{
   const delta=Math.abs(point.s-curb.s),cyclic=Math.min(delta,track.length-delta);
   if(cyclic<24)continue;
   assert.ok(Math.hypot(point.x-curb.x,point.z-curb.z)>track.trackWidth*.88,'curb is too close to a second road section');
+ }
+});
+
+test('UT Grand Prix race furniture stays clear of racers and item boxes',()=>{
+ const track=TRACKS.find(item=>item.id==='ut-campus-grand-prix'),decor=campusRaceDecor(track);
+ assert.ok(decor.length>=24,'campus circuit needs a complete race-furniture pass');
+ for(const prop of decor){
+  assert.ok(prop.clearance>=track.trackWidth/2+3,'race furniture intrudes on the drivable width');
+  for(const box of track.itemBoxes)assert.ok(Math.hypot(prop.x-box.x,prop.z-box.z)>=10,'race furniture blocks an item box');
  }
 });
