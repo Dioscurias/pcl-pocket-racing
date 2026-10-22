@@ -1,5 +1,5 @@
 import {DEFAULT_TRACK,trackById,nearestTrack,pointAtDistance,surfaceAt,insideFloor,hazardPosition,inFlightRange} from './tracks.js';
-import {CARS,normalizeCar} from './car-catalog.js';
+import {CARS,normalizeCar,carById} from './car-catalog.js';
 export const KART_RADIUS = .56;
 export const PLAYER_COLORS = [0x1677ff,0xffbf3f,0xff5a4d,0x18c7b5,0xa970ff,0xfff0c7,0x83d63f,0xf04fa3];
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v)),finite=(v,f=0)=>Number.isFinite(v)?v:f,angle=v=>Math.atan2(Math.sin(v),Math.cos(v));
@@ -14,7 +14,7 @@ export function createWorld(options={}){
 function emit(w,type,p){w.effects.push({id:++w.effectSerial,type,x:p.x,y:p.y,z:p.z,time:w.time,playerId:p.id,tier:p.tier||0,item:p.item||null});if(w.effects.length>70)w.effects.shift();}
 function spawn(w,p,index=w.players.indexOf(p)){
  const track=course(w),origin=pointAtDistance(track,-3-Math.floor(index/2)*4),side=index%2?1.8:-1.8;
- Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,gliding:false,penalty:0,hazardHits:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_lastDynamic:-5,_itemHeld:false,_driftHeld:false,_stuck:0});
+ Object.assign(p,{x:origin.x+Math.cos(origin.heading)*side,z:origin.z+Math.sin(origin.heading)*side,y:0,vx:0,vz:0,vy:0,heading:origin.heading,roll:0,lean:0,speed:0,energy:100,drift:0,driftTier:0,turboUntil:0,item:null,shieldUntil:0,stunnedUntil:0,lap:0,nextCheckpoint:1,lastCheckpoint:0,position:index+1,bestLap:null,lapTimes:[],lapStartedAt:w.time,finishedAt:null,finishTime:null,checkpointTimes:[],grounded:true,gliding:false,penalty:0,hazardHits:0,_lapPenalty:0,_wasDrifting:false,_resetHeld:false,_lastBoost:-5,_lastPickup:-5,_lastDynamic:-5,_itemHeld:false,_driftHeld:false,_stuck:0,_flipped:0});
  p.y=surfaceAt(track,p.x,p.z,origin.y||0);p.input=emptyInput();w._inputs[p.id]=p.input;
 }
 export function addPlayer(w,id,name,{bot=false,car,color}={}){
@@ -33,19 +33,26 @@ export function startMatch(w){
  for(const p of w.players)spawn(w,p);
 }
 export function resetMatch(w){w.phase='lobby';w.countdown=0;w.winner=null;w.finishDeadline=null;w.remaining=null;w.effects=[];for(const p of w.players)spawn(w,p);}
-function resetKart(w,p){const track=course(w),gate=track.checkpoints[inFlightRange(track,track.checkpoints[p.lastCheckpoint].s)?Math.max(0,p.lastCheckpoint-2):p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z,gate.y||0);p.heading=gate.heading;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.gliding=false;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=0;emit(w,'reset',p);}
+function resetKart(w,p){const track=course(w),gate=track.checkpoints[inFlightRange(track,track.checkpoints[p.lastCheckpoint].s)?Math.max(0,p.lastCheckpoint-2):p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z,gate.y||0);p.heading=gate.heading;p.roll=p.lean=0;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.gliding=false;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=p._flipped=0;emit(w,'reset',p);}
 function distanceToSegment(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a.x-dx*t,z-a.z-dz*t);}
 function onShortcut(track,p){return track.shortcuts.some(s=>s.points.some((point,i)=>i&&distanceToSegment(p.x,p.z,s.points[i-1],point)<s.width/2));}
 function wallContacts(w,p){
+ const radius=carById(p.car).handling.radius;
  for(const box of course(w).obstacles){
   if(p.y>(box.y||0)+(box.height||10)||p.y+1.2<(box.y||0))continue;
   const cx=clamp(p.x,box.x-box.w/2,box.x+box.w/2),cz=clamp(p.z,box.z-box.d/2,box.z+box.d/2),dx=p.x-cx,dz=p.z-cz,d=Math.hypot(dx,dz);
-  if(d>=KART_RADIUS)continue;
+  if(d>=radius)continue;
   let nx,nz,depth;
-  if(d>.0001){nx=dx/d;nz=dz/d;depth=KART_RADIUS-d;}
-  else{const sides=[{d:Math.abs(p.x-(box.x-box.w/2)),x:-1,z:0},{d:Math.abs(p.x-(box.x+box.w/2)),x:1,z:0},{d:Math.abs(p.z-(box.z-box.d/2)),x:0,z:-1},{d:Math.abs(p.z-(box.z+box.d/2)),x:0,z:1}].sort((a,b)=>a.d-b.d);nx=sides[0].x;nz=sides[0].z;depth=sides[0].d+KART_RADIUS;}
-  p.x+=nx*(depth+.01);p.z+=nz*(depth+.01);const inward=p.vx*nx+p.vz*nz;if(inward<0){p.vx-=nx*inward*1.25;p.vz-=nz*inward*1.25;if(w.time-(p._lastImpact||0)>.35&&Math.abs(inward)>4){emit(w,'bump',p);p._lastImpact=w.time;}}
+  if(d>.0001){nx=dx/d;nz=dz/d;depth=radius-d;}
+  else{const sides=[{d:Math.abs(p.x-(box.x-box.w/2)),x:-1,z:0},{d:Math.abs(p.x-(box.x+box.w/2)),x:1,z:0},{d:Math.abs(p.z-(box.z-box.d/2)),x:0,z:-1},{d:Math.abs(p.z-(box.z+box.d/2)),x:0,z:1}].sort((a,b)=>a.d-b.d);nx=sides[0].x;nz=sides[0].z;depth=sides[0].d+radius;}
+  p.x+=nx*(depth+.02);p.z+=nz*(depth+.02);const inward=p.vx*nx+p.vz*nz;if(inward<0){p.vx-=nx*inward*1.04;p.vz-=nz*inward*1.04;p.vx*=.985;p.vz*=.985;if(w.time-(p._lastImpact||0)>.35&&Math.abs(inward)>4){emit(w,'bump',p);p._lastImpact=w.time;}}
  }
+}
+function softRail(track,p){
+ if(!p.grounded||p.gliding||onShortcut(track,p))return;
+ const near=nearestTrack(track,p.x,p.z),limit=track.trackWidth*.72;if(near.distance<=limit)return;
+ const dx=p.x-near.x,dz=p.z-near.z,d=Math.max(.001,Math.hypot(dx,dz)),nx=dx/d,nz=dz/d;
+ p.x=near.x+nx*limit;p.z=near.z+nz*limit;const outward=p.vx*nx+p.vz*nz;if(outward>0){p.vx-=nx*outward*1.02;p.vz-=nz*outward*1.02;}p.vx*=.99;p.vz*=.99;
 }
 function gateProgress(w,p,oldX,oldZ){
  if(p.finishedAt!==null)return;
@@ -102,10 +109,10 @@ function updateItems(w,dt){
 function move(w,p,dt){
  if(p.bot)setInput(w,p.id,botInput(w,p));const input=p.input||emptyInput();p.steerVisual=input.steer;
  if(input.reset&&!p._resetHeld)resetKart(w,p);p._resetHeld=input.reset;if(input.item&&!p._itemHeld)useItem(w,p);p._itemHeld=input.item;
- const finished=p.finishedAt!==null,fx=Math.sin(p.heading),fz=-Math.cos(p.heading),rx=Math.cos(p.heading),rz=Math.sin(p.heading);
+ const handling=carById(p.car).handling,finished=p.finishedAt!==null,fx=Math.sin(p.heading),fz=-Math.cos(p.heading),rx=Math.cos(p.heading),rz=Math.sin(p.heading);
  let forward=p.vx*fx+p.vz*fz,side=p.vx*rx+p.vz*rz;
  const drifting=!finished&&input.drift&&Math.abs(input.steer)>.15&&Math.abs(forward)>8&&p.grounded;
- if(drifting){p.drift=clamp(p.drift+(38+Math.abs(input.steer)*20)*dt,0,100);p.driftTier=driftTier(p.drift);}
+ if(drifting){p.drift=clamp(p.drift+(38+Math.abs(input.steer)*20)*handling.driftCharge*dt,0,100);p.driftTier=driftTier(p.drift);}
  if(p._wasDrifting&&!input.drift){const tier=driftTier(p.drift);if(tier){p.turboUntil=Math.max(p.turboUntil,w.time+[0,.85,1.3,1.8][tier]);emit(w,'drift-boost',{...p,tier});}p.drift=0;p.driftTier=0;}
  if(!input.drift&&!p._wasDrifting){p.drift=0;p.driftTier=0;}p._wasDrifting=drifting;
  const stunned=p.stunnedUntil>w.time;if(stunned){input.throttle=0;input.steer*=.25;}
@@ -113,12 +120,12 @@ function move(w,p,dt){
  p.boosting=boosting;p.energy=clamp(p.energy+(boosting?-35:8)*dt,0,100);
  const turbo=p.turboUntil>w.time;
  if(finished)forward*=Math.exp(-2*dt);
- else if(input.throttle<0){forward-=47*Math.abs(input.throttle)*dt;forward=Math.max(-9,forward);}
- else forward+=input.throttle*(boosting||turbo?43:30)*dt;
+ else if(input.throttle<0){forward-=handling.brake*Math.abs(input.throttle)*dt;forward=Math.max(-9,forward);}
+ else forward+=input.throttle*(boosting||turbo?handling.acceleration*1.43:handling.acceleration)*dt;
  forward*=Math.exp(-(Math.abs(input.throttle)>.01?.35:1.6)*dt);
- const track=course(w),near=nearestTrack(track,p.x,p.z),carpet=near.distance>track.trackWidth/2&&!onShortcut(track,p),cap=(boosting||turbo?42:32)*(carpet?.65:1);
- forward=clamp(forward,-9,cap);side*=Math.exp(-(drifting?3.8:13)*dt);
- const turnRate=2.55*clamp(Math.abs(forward)/10,0,1)*(drifting?1.12:1)*(forward<0?-1:1)*(p.grounded?1:p.gliding?.92:.35);
+ const track=course(w),near=nearestTrack(track,p.x,p.z),carpet=near.distance>track.trackWidth/2&&!onShortcut(track,p),cap=(boosting||turbo?handling.boostSpeed:handling.topSpeed)*(carpet?.72:1);
+ forward=clamp(forward,-9,cap);side*=Math.exp(-(drifting?handling.driftGrip:handling.grip)*dt);
+ const speedSteer=clamp(Math.abs(forward)/9,0,1)*(1-clamp((Math.abs(forward)-22)/60,0,.25)),turnRate=handling.steering*speedSteer*(drifting?1.12:1)*(forward<0?-1:1)*(p.grounded?1:p.gliding?.92:.35);
  if(!finished)p.heading=angle(p.heading+input.steer*turnRate*dt);
  // Preserve world momentum during steering, then dissipate lateral slip on the next frame.
  p.vx=fx*forward+rx*side;p.vz=fz*forward+rz*side;
@@ -131,12 +138,13 @@ function move(w,p,dt){
  }
  if(!p.grounded){p.gliding=p.gliding&&flightArea;p.vy-=(p.gliding?4.2:27)*dt;if(p.gliding)p.vy=Math.max(p.vy,-6.5);p.y+=p.vy*dt;if(p.y<=surface){p.y=surface;p.vy=0;p.grounded=true;p.gliding=false;emit(w,'land',p);}}
  wallContacts(w,p);
+ if(!insideFloor(track,p.x,p.z)||p.y< -5||!Number.isFinite(p.x+p.z+p.y)){resetKart(w,p);return;}
+ softRail(track,p);
  for(const hazard of track.dynamicObstacles||[]){const position=hazardPosition(hazard,w.time),dx=p.x-position.x,dz=p.z-position.z,d=Math.hypot(dx,dz),limit=KART_RADIUS+hazard.radius;if(d>=limit||Math.abs(p.y-(hazard.y||0))>3||w.time-p._lastDynamic<.75)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;p.x=position.x+nx*(limit+.05);p.z=position.z+nz*(limit+.05);p.vx=nx*Math.max(4,p.speed*.38);p.vz=nz*Math.max(4,p.speed*.38);p.hazardHits++;p._lastDynamic=w.time;emit(w,'bump',p);}
- if(!insideFloor(track,p.x,p.z)||p.y< -5||!Number.isFinite(p.x+p.z+p.y))resetKart(w,p);
- p.speed=Math.hypot(p.vx,p.vz);
+ p.speed=Math.hypot(p.vx,p.vz);p.lean=carById(p.car).type==='motorcycle'?clamp(-input.steer*p.speed/handling.topSpeed*.62,-.62,.62):0;
  for(const pad of track.boostPads){const dx=p.x-pad.x,dz=p.z-pad.z,f=dx*Math.sin(pad.heading)-dz*Math.cos(pad.heading),r=dx*Math.cos(pad.heading)+dz*Math.sin(pad.heading);if(Math.abs(f)<pad.length/2&&Math.abs(r)<pad.width/2&&p.grounded&&w.time-p._lastBoost>2){p.turboUntil=w.time+1.5;p._lastBoost=w.time;emit(w,'boost',p);}}
  gateProgress(w,p,ox,oz);
- if(p.bot){p._stuck=p.speed<2?p._stuck+dt:0;if(p._stuck>3)resetKart(w,p);}
+ const trying=Math.abs(input.throttle)>.5;p._stuck=trying&&p.speed<.65?p._stuck+dt:0;p._flipped=Math.abs(p.roll||0)>1.2?p._flipped+dt:0;if(p._stuck>(p.bot?3:3.5)||p._flipped>1.5)resetKart(w,p);
 }
 function advance(w,dt){
  w.time+=dt;w.effects=w.effects.filter(e=>w.time-e.time<2);
@@ -144,7 +152,7 @@ function advance(w,dt){
  if(w.phase!=='playing')return;
  for(const p of w.players)move(w,p,dt);
  for(let i=0;i<w.players.length;i++)for(let j=i+1;j<w.players.length;j++){
-  const a=w.players[i],b=w.players[j];if(Math.abs(a.y-b.y)>1.8)continue;const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz),over=KART_RADIUS*2-d;if(over<=0)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;
+  const a=w.players[i],b=w.players[j];if(Math.abs(a.y-b.y)>1.8)continue;const dx=b.x-a.x,dz=b.z-a.z,d=Math.hypot(dx,dz),over=carById(a.car).handling.radius+carById(b.car).handling.radius-d;if(over<=0)continue;const nx=d>.001?dx/d:1,nz=d>.001?dz/d:0;
   a.x-=nx*over*.51;a.z-=nz*over*.51;b.x+=nx*over*.51;b.z+=nz*over*.51;const closing=(b.vx-a.vx)*nx+(b.vz-a.vz)*nz;if(closing<0){a.vx+=nx*closing*.6;a.vz+=nz*closing*.6;b.vx-=nx*closing*.6;b.vz-=nz*closing*.6;}
  }
  updateItems(w,dt);rank(w);if(w.finishDeadline!==null){w.remaining=Math.max(0,w.finishDeadline-w.time);if(w.remaining===0||w.players.every(p=>p.finishedAt!==null)){w.phase='finished';w.countdown=0;w.winner=[...w.players].filter(p=>p.finishedAt!==null).sort((a,b)=>a.finishTime-b.finishTime)[0]?.id||null;}}

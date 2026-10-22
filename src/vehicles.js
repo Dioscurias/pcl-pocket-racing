@@ -42,16 +42,29 @@ function driver(g,paints,{lower=false}={}){const {paint,black,alloy,suit,glass}=
  const steering=part(g,new THREE.TorusGeometry(.205,.025,8,20),black,0,.99,-.28);steering.rotation.x=.7;rod(g,alloy,[0,.8,-.12],[0,.98,-.28],.018);batch(driver);return driver;
 }
 
+function buildMotorcycle(color){
+ const group=new THREE.Group(),lean=new THREE.Group();group.add(lean);group.name='vehicle-motorcycle';group.userData.model='motorcycle';group.scale.setScalar(VEHICLE_SCALE);
+ const paint=material(color,{metalness:.55,roughness:.25}),black=material('#11151c'),rubber=material('#181b20',{roughness:.94}),alloy=material('#d6dde0',{metalness:.85}),carbon=material('#242831'),glass=material('#16212d',{metalness:.45,roughness:.1}),brake=material('#6a6d70'),suit=material('#fff3d0',{roughness:.72}),paints={paint,black,rubber,alloy,carbon,glass,brake,suit};
+ const wheels=[],front=[];for(const z of [-1.05,1.05]){const pivot=wheel(paints,1);pivot.scale.set(.68,.68,.68);pivot.position.set(0,.37,z);lean.add(pivot);wheels.push(pivot);if(z<0)front.push(pivot);}
+ const body=new THREE.Group();lean.add(body);shell(body,paint,[[-1.22,.18,.45,.12],[-.7,.42,.57,.27],[.05,.36,.61,.24],[.75,.2,.47,.14]]);box(body,carbon,[.32,.16,1.65],[0,.48,.08],.08);oval(body,paint,[0,.8,-.3],[.42,.27,.58]);
+ for(const side of [-1,1]){rod(body,alloy,[0,.46,-.82],[side*.18,.65,-1.03],.035);rod(body,alloy,[0,.5,.86],[side*.16,.38,1.05],.03);rod(body,black,[side*.08,1.02,-.72],[side*.46,1.03,-.82],.025);}
+ box(body,black,[.46,.13,.55],[0,.82,.45],.06);oval(body,glass,[0,.98,-.74],[.32,.22,.08]);
+ const rider=new THREE.Group();rider.position.set(0,.75,.2);lean.add(rider);oval(rider,suit,[0,.62,.18],[.25,.44,.24]);oval(rider,paint,[0,1.05,-.12],[.24,.25,.24]);oval(rider,glass,[0,1.08,-.33],[.2,.09,.07]);for(const side of [-1,1]){rod(rider,suit,[side*.16,.75,.04],[side*.31,.55,-.62],.065);rod(rider,suit,[side*.14,.5,.3],[side*.22,.22,.73],.07);}
+ batch(body);batch(rider);const exhaust=new THREE.Group();lean.add(exhaust);exhaust.visible=false;const flame=part(exhaust,new THREE.ConeGeometry(.09,.58,8),new THREE.MeshBasicMaterial({color:'#8eeaff',transparent:true,opacity:.8}),0,.42,1.58);flame.rotation.x=Math.PI/2;
+ return {group,body,paint,driver:rider,front,wheels,exhaust,model:'motorcycle',lean};
+}
+
 export function buildVehicle({car='apex',color=0x1859b7}={}){
  const model=normalizeCar(car),group=new THREE.Group(),body=new THREE.Group();group.add(body);
+ if(model==='motorcycle')return buildMotorcycle(color);
  group.name=`vehicle-${model}`;group.userData.model=model;group.scale.setScalar(VEHICLE_SCALE);
  const paint=material(color,{metalness:.62,roughness:.22}),black=material('#11151c',{roughness:.42}),rubber=material('#181b20',{roughness:.94}),alloy=material('#c2c9cc',{metalness:.85,roughness:.24}),carbon=material('#242831',{metalness:.25,roughness:.53}),glass=material('#16212d',{metalness:.48,roughness:.1,side:THREE.DoubleSide}),brake=material('#6a6d70',{metalness:.7,roughness:.45}),suit=material('#d1d5dd',{roughness:.75}),light=material('#e6edf2',{metalness:.3,roughness:.16}),red=material('#9b1920',{emissive:'#5c080b',emissiveIntensity:.35});
  const paints={paint,black,rubber,alloy,carbon,glass,brake,suit};
  box(body,carbon,[1.48,.12,2.8],[0,.35,0]);
  const sports=model==='roadster'||model==='coupe';
  if(!sports){
-  const club=model==='club',formula=model==='formula';
-  shell(body,paint,club?[[-1.5,.12,.53,.07],[-1.3,.37,.62,.18],[-.7,.44,.75,.23],[-.15,.41,.81,.24]]:[[-1.66,.08,.43,.06],[-1.25,.23,.56,.13],[-.65,.39,.72,.21],[-.12,.4,.79,.24]]);
+  const formula=model==='apex-formula';
+  shell(body,paint,formula?[[-1.5,.12,.53,.07],[-1.3,.37,.62,.18],[-.7,.44,.75,.23],[-.15,.41,.81,.24]]:[[-1.66,.08,.43,.06],[-1.25,.23,.56,.13],[-.65,.39,.72,.21],[-.12,.4,.79,.24]]);
   for(const side of [-1,1]){
    shell(body,paint,[[-.38,.11,.58,.12],[0,.18,.68,.24],[.65,.18,.7,.3],[1.12,.12,.66,.23]],side*.56);
    box(body,carbon,[.055,.28,.48],[side*.747,.64,.1],.015);
@@ -61,13 +74,13 @@ export function buildVehicle({car='apex',color=0x1859b7}={}){
   tube(body,paint,[[-.27,.75,.7],[-.28,1.32,.64],[-.2,1.6,.68],[0,1.64,.7],[.2,1.6,.68],[.28,1.32,.64],[.27,.75,.7]],.038);
   shell(body,paint,[[.7,.3,.73,.16],[1.05,.39,.73,.18],[1.4,.18,.65,.1]]);
   box(body,black,[.64,.12,.8],[0,.74,.32]);box(body,black,[.55,.51,.13],[0,1.01,.7],.06);
-  spoiler(body,paint,carbon,alloy,{wide:club?1.8:2.08,height:formula?1.32:1.24});
+  spoiler(body,paint,carbon,alloy,{wide:formula?1.9:2.08,height:formula?1.32:1.24});
   const wing=box(body,paint,[formula?1.95:1.8,.07,.38],[0,.25,-1.43],.035);wing.rotation.x=.05;
   for(const side of [-1,1])box(body,paint,[.045,.17,.4],[side*(formula?.95:.88),.31,-1.43],.02);
-  pane(body,glass,club?.43:.36,[.91,-.4],[club?1.26:1.12,-.17]);
-  tube(body,paint,[[-.39,.89,-.35],[-.28,club?1.3:1.17,-.18],[0,club?1.34:1.2,-.17],[.28,club?1.3:1.17,-.18],[.39,.89,-.35]],.022);
+  pane(body,glass,formula?.43:.36,[.91,-.4],[formula?1.26:1.12,-.17]);
+  tube(body,paint,[[-.39,.89,-.35],[-.28,formula?1.3:1.17,-.18],[0,formula?1.34:1.2,-.17],[.28,formula?1.3:1.17,-.18],[.39,.89,-.35]],.022);
   for(const side of [-1,1]){rod(body,alloy,[side*.39,.95,-.22],[side*.64,1.03,-.32],.015);oval(body,paint,[side*.65,1.04,-.32],[.105,.055,.07]);}
-  if(club){oval(body,black,[0,.56,-1.48],[.23,.1,.04]);for(const side of [-1,1])oval(body,light,[side*.43,.68,-1.1],[.075,.075,.04]);}
+  if(formula){oval(body,black,[0,.56,-1.48],[.23,.1,.04]);for(const side of [-1,1])oval(body,light,[side*.43,.68,-1.1],[.075,.075,.04]);}
  }else{
   // Separated fenders and side sills preserve the open cockpit and oversized toy tires.
   shell(body,paint,[[-1.62,.47,.57,.11],[-1.4,.65,.63,.22],[-.9,.64,.74,.23],[-.42,.54,.83,.17]]);

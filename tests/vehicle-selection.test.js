@@ -11,12 +11,11 @@ test('selected car survives host snapshots and rematches with the same shared pa
  startMatch(world);resetMatch(world);
  assert.deepEqual(snapshot(world).players.map(p=>[p.car,p.color]),[['roadster',host.color],['coupe',guest.color]]);
 });
-
 test('invalid car selections fall back safely and AI racers use the full collection',()=>{
  const world=createWorld({bots:7});
  const host=addPlayer(world,'host','Nico',{car:{bad:true},color:0x123456});assert.equal(host.car,'apex');assert.equal(host.color,0x1677ff);
  startMatch(world);
  const cars=world.players.map(p=>p.car);
- assert.ok(cars.every(c=>['apex','club','formula','roadster','coupe'].includes(c)));
+ assert.ok(cars.every(c=>['apex','apex-formula','roadster','coupe','motorcycle'].includes(c)));
  assert.equal(new Set(cars).size,5);
 });

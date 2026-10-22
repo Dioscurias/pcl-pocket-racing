@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createWorld, addPlayer, setInput, startMatch, stepWorld, resetMatch, snapshot, botInput } from '../src/simulation.js';
 import { CHECKPOINTS, TRACK_LENGTH, ITEM_BOXES, pointAtDistance, surfaceAt } from '../src/track-layout.js';
+import {trackById} from '../src/tracks.js';
 const advance = (w, seconds) => { for (let t = 0; t < seconds; t += 1 / 60) stepWorld(w, 1 / 60); };
 const active = options => { const w = createWorld({ bots: 0, ...options }); addPlayer(w, 'a', 'Ada'); startMatch(w); advance(w, 3.1); return w; };
 
@@ -112,4 +113,32 @@ test('book and ink hazards disrupt rivals while a citation shield absorbs one hi
  Object.assign(a,{item:'shield'});setInput(w,a.id,{item:false});stepWorld(w,1/60);setInput(w,a.id,{item:true});stepWorld(w,1/60);
  assert.ok(a.shieldUntil>w.time);w.hazards.push({id:'test',type:'ink',x:a.x,z:a.z,owner:'b',expires:w.time+10});stepWorld(w,1/60);
  assert.equal(a.stunnedUntil??0,0);assert.ok(a.shieldUntil<=w.time);
+});
+
+test('motorcycle uses a sharper dedicated handling mechanism than Apex',()=>{
+ const bike=active(),kart=active(),b=bike.players[0],k=kart.players[0];b.car='motorcycle';k.car='apex';
+ for(const p of [b,k])Object.assign(p,{x:-82,z:-25,heading:0,vx:0,vz:-18,speed:18});
+ setInput(bike,b.id,{throttle:1,steer:.65});setInput(kart,k.id,{throttle:1,steer:.65});advance(bike,.75);advance(kart,.75);
+ assert.ok(Math.abs(b.heading)>Math.abs(k.heading)+.12,`${b.heading} vs ${k.heading}`);
+ const straightBike=active(),straightKart=active(),sb=straightBike.players[0],sk=straightKart.players[0];sb.car='motorcycle';sk.car='apex';
+ setInput(straightBike,sb.id,{throttle:1});setInput(straightKart,sk.id,{throttle:1});advance(straightBike,.5);advance(straightKart,.5);assert.ok(sb.speed>sk.speed);
+});
+
+test('high-speed wall impacts cannot tunnel and preserve sliding velocity',()=>{
+ const w=active(),p=w.players[0];
+ Object.assign(p,{x:-20,z:0,heading:Math.PI/2,vx:240,vz:18,speed:241});
+ stepWorld(w,.1);
+ assert.ok(p.x<6.5,'kart must remain outside the central stair collider');
+ assert.ok(Math.abs(p.vz)>3,'wall response must preserve tangent motion');
+});
+
+test('adaptive collision stepping catches a thin barrier at extreme speed',()=>{
+ const w=active(),p=w.players[0],track=trackById(w.trackId),barrier={id:'thin-test',x:-50,z:-60,w:.12,d:18,height:8};track.obstacles.push(barrier);
+ try{Object.assign(p,{x:-60,z:-60,y:0,heading:Math.PI/2,vx:260,vz:0,speed:260});stepWorld(w,.08);assert.ok(p.x<barrier.x,'racer crossed a thin collider');}
+ finally{track.obstacles.pop();}
+});
+
+test('a flipped human racer automatically recovers upright',()=>{
+ const w=active(),p=w.players[0];p.roll=Math.PI;advance(w,2);
+ assert.ok(p.penalty>=2);assert.equal(p.roll,0);assert.equal(p.grounded,true);
 });

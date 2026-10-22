@@ -7,11 +7,12 @@ import {CARS} from '../src/car-catalog.js';
 
 test('kart model and collision footprint use the approved miniature scale',()=>{assert.equal(VEHICLE_SCALE,.65);assert.equal(KART_RADIUS,.56);const {group}=buildVehicle();assert.equal(group.scale.x,.65);assert.equal(group.scale.y,.65);assert.equal(group.scale.z,.65);});
 
-test('five finite, distinct car bodies retain animated steering and wheel roll pivots',()=>{
+test('five finite, distinct vehicle bodies include Apex Formula and a two-wheel motorcycle',()=>{
+ assert.deepEqual(CARS.map(car=>car.name),['Apex','Apex Formula','GT Roadster','Rally Coupe','Motorcycle']);
  const signatures=[];
  for(const car of CARS){const vehicle=buildVehicle({car:car.id,color:0x1859b7});
   assert.equal(vehicle.model,car.id);assert.equal(vehicle.paint.color.getHex(),0x1859b7);
-  assert.equal(vehicle.wheels.length,4);assert.equal(vehicle.front.length,2);
+  assert.equal(vehicle.wheels.length,car.type==='motorcycle'?2:4);assert.equal(vehicle.front.length,car.type==='motorcycle'?1:2);
   for(const wheel of vehicle.wheels){assert.ok(wheel.userData.roll.isGroup);assert.notEqual(wheel,wheel.userData.roll);}
   const bounds=new THREE.Box3().setFromObject(vehicle.group),size=bounds.getSize(new THREE.Vector3());
   assert.ok(size.x<2.7&&size.z<4&&bounds.min.y>=-.015,JSON.stringify({car:car.id,size,min:bounds.min}));
@@ -19,4 +20,12 @@ test('five finite, distinct car bodies retain animated steering and wheel roll p
   assert.ok(meshes<40,`${car.id}: ${meshes} draw calls`);signatures.push(signature);
  }
  assert.equal(new Set(signatures).size,5);
+});
+
+test('motorcycle has its own agile handling profile and lean pivot',()=>{
+ const bike=CARS.find(car=>car.type==='motorcycle'),kart=CARS.find(car=>car.id==='apex');
+ assert.ok(bike.handling.acceleration>kart.handling.acceleration);
+ assert.ok(bike.handling.steering>kart.handling.steering);
+ assert.ok(bike.handling.radius<kart.handling.radius);
+ const vehicle=buildVehicle({car:bike.id});assert.ok(vehicle.lean?.isGroup);
 });

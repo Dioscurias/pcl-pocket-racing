@@ -1,7 +1,7 @@
 // PCL Level 3 stack labels and floor organization inform this authored toy circuit.
 // Dimensions are gameplay units, not a survey. Furniture clearances accommodate karts.
 export const TRACK_POINTS = [[15,35],[15,-48],[28,-68],[70,-64],[90,-35],[90,10],[76,54],[25,78],[-14,65],[-45,38],[-82,5],[-82,-35],[-60,-53],[-32,-60],[-25,-25],[-25,20],[-10,39]].map(([x,z])=>({x,z}));
-export const TRACK_WIDTH = 10.2;
+export const TRACK_WIDTH = 11.5;
 const mod=(n,d)=>(n%d+d)%d;
 function curve(a,b,c,d,t){return .5*((2*b)+(-a+c)*t+(2*a-5*b+4*c-d)*t*t+(-a+3*b-3*c+d)*t*t*t);}
 export const CENTERLINE=[];

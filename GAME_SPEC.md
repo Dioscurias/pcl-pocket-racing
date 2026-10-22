@@ -73,17 +73,17 @@ The control hint appears at the start of a round and fades after 6.5 seconds. In
 
 ## Kart selection
 
-Five visual bodies share the same competitive physics:
+Five vehicles use deterministic arcade handling profiles:
 
 1. **Apex**: pointed nose and open wheels.
-2. **Club Sport**: rounded nose and twin roll hoops.
-3. **Formula**: sculpted nose and wide front wing.
-4. **GT Roadster**: open top and rounded fenders.
-5. **Rally Coupe**: closed cockpit and exposed rear wheels.
+2. **Apex Formula**: sculpted nose and wide front wing.
+3. **GT Roadster**: open top and rounded fenders.
+4. **Rally Coupe**: closed cockpit and exposed rear wheels.
+5. **Motorcycle**: two-wheel racer with agile handling and lean animation.
 
 Each procedural kart contains glossy bodywork, continuous curved shells, carbon surfaces, alloy components, modeled tires, rims, brake discs, spokes, tread blocks, suspension details, exhaust pipes, lights, cockpit glass, a steering wheel, spoilers, and a helmeted driver. Front wheels steer. All wheels roll. The body leans under steering, bounces with speed and suspension movement, and reacts while airborne. The driver leans into turns. Exhaust flames appear during boost and turbo states. Drift sparks change from blue to gold to purple as drift charge increases.
 
-Kart render scale is `0.65`. Gameplay collision radius is `0.56` world units. Every kart uses identical movement values so vehicle choice is cosmetic and fair.
+Vehicle render scale is `0.65`. Cars use collision radii near `0.56` world units. The motorcycle uses a narrower footprint, quicker acceleration, sharper steering, lighter grip, faster drift charge, and automatic visual lean. All profiles run through the same fixed-step authoritative simulation.
 
 ## Paint colors
 

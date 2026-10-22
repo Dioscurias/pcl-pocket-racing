@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {TRACKS,trackById,pointAtDistance,nearestTrack,surfaceAt,insideFloor,hazardPosition} from '../src/tracks.js';
 import {createWorld,addPlayer,startMatch,stepWorld,setInput} from '../src/simulation.js';
+import {CARS} from '../src/car-catalog.js';
 
 test('track catalog contains distinct complete selectable circuits',()=>{
  assert.ok(TRACKS.length>=2);
@@ -101,4 +102,23 @@ test('every published track can finish a clean AI lap without checkpoint resets'
 
 test('all published track surfaces stay above the floor and inside the building',()=>{
  for(const track of TRACKS)for(const point of track.centerline){assert.ok((point.y||0)>=0,track.id+' dips through floor');assert.ok(insideFloor(track,point.x,point.z),track.id+' leaves the building');}
+});
+
+test('soft edge rails keep a moving racer near every ordinary racing surface',()=>{
+ for(const track of TRACKS){
+  const world=createWorld({trackId:track.id,laps:1,bots:0}),racer=addPlayer(world,'edge','Edge');startMatch(world);
+  for(let i=0;i<190;i++)stepWorld(world,1/60);
+  const start=pointAtDistance(track,track.length*.2),sideX=Math.cos(start.heading),sideZ=Math.sin(start.heading);
+  Object.assign(racer,{x:start.x+sideX*track.trackWidth*.9,z:start.z+sideZ*track.trackWidth*.9,y:start.y||0,heading:start.heading,vx:sideX*30,vz:sideZ*30,grounded:true});
+  stepWorld(world,.1);const near=nearestTrack(track,racer.x,racer.z);
+  assert.ok(near.distance<=track.trackWidth*.76,`${track.id} escaped at ${near.distance}`);
+ }
+});
+
+test('every vehicle finishes every track without falling through or requiring a reset',()=>{
+ for(const track of TRACKS)for(const car of CARS){
+  const world=createWorld({trackId:track.id,laps:1,bots:0}),racer=addPlayer(world,car.id,car.name,{bot:true,car:car.id});startMatch(world);
+  for(let i=0;i<60*180&&racer.lap<1;i++)stepWorld(world,1/60);
+  assert.equal(racer.lap,1,`${car.name} did not finish ${track.name}`);assert.equal(racer.penalty,0,`${car.name} reset on ${track.name}`);assert.ok(racer.y>=0&&Number.isFinite(racer.x+racer.y+racer.z));
+ }
 });
