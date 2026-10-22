@@ -22,8 +22,8 @@ Live game: `https://pcl-pocket-racing.vercel.app`
 ## Core game loop
 
 1. The player enters a racer name.
-2. The player chooses one of five kart bodies.
-3. The player chooses one of eight paint colors.
+2. The player chooses one of four vehicle bodies.
+3. The player chooses one of eight racer colors.
 4. The player selects Race or Time Trial.
 5. The player starts a local race, creates a private lobby, or joins a lobby using a six-character invite code.
 6. A three-second countdown begins.
@@ -84,9 +84,9 @@ The supplied models preserve their embedded color, normal and metallic-roughness
 
 Vehicle render scale is `0.65`. Cars use collision radii near `0.56` world units. The motorcycle uses a narrower footprint, quicker acceleration, sharper steering, lighter grip, faster drift charge, and automatic visual lean. All profiles run through the same fixed-step authoritative simulation.
 
-## Paint colors
+## Racer colors
 
-Players choose from eight synchronized paint colors:
+Players choose from eight synchronized racer colors:
 
 - Blue `#1677ff`
 - Gold `#ffbf3f`
@@ -97,7 +97,7 @@ Players choose from eight synchronized paint colors:
 - Green `#83d63f`
 - Pink `#f04fa3`
 
-The chosen name, kart, and paint are persisted locally. Multiplayer snapshots preserve the same car and color on every connected screen. If a color is not supplied or is invalid, the game assigns the first unused approved color.
+The chosen name, vehicle, and racer color are persisted locally. Multiplayer snapshots preserve the same car and color on every connected screen. If a color is not supplied or is invalid, the game assigns the first unused approved color.
 
 ## Movement and physics
 
@@ -285,8 +285,8 @@ The minimap rotates with player heading, renders the complete circuit, and draws
 - Live library environment behind a translucent arcade garage card.
 - Racer-name field limited to 20 characters.
 - Rotating live 3D preview of the selected kart.
-- Five-button kart carousel.
-- Eight circular paint swatches.
+- Four-button vehicle carousel.
+- Eight circular racer-color swatches.
 - Mode selector.
 - Quick Race or Time Trial button.
 - Create Private Lobby button.
@@ -334,7 +334,7 @@ Local Storage keys preserve:
 
 - Racer name
 - Selected kart
-- Selected paint
+- Selected racer color
 - Top ten time-trial laps
 - Best valid ghost recording
 
@@ -425,23 +425,21 @@ Each player contains identity, name, approved color, car ID, bot state, transfor
 - `bookRamp(ramp)`: constructs a playable giant-book ramp.
 - `createStart()`: builds the start banner, pencil supports, and checkered line.
 - `batchStatic()`: converts compatible repeated static boxes into instanced meshes.
-- `createCar(player)`: builds a selected procedural vehicle, player name sprite, ghost treatment, and drift particles.
+- `createCar(player)`: clones the selected preloaded GLB vehicle and adds its player name, ghost treatment, glider, and drift particles.
 - `createEffects()`: creates the reusable skid-mark pool and camera-shake state.
 - `syncArcadeObjects(world)`: creates, updates, and removes item hazards, projectiles, and shields.
-- `update(world, localId, dt, options)`: animates students, cars, wheels, steering, body roll, suspension, driver lean, exhaust, drift sparks, skid marks, hazards, camera, and rendering.
+- `update(world, localId, dt, options)`: animates students, vehicle body roll, motorcycle lean, exhaust, drift sparks, skid marks, hazards, camera, and rendering.
 - `drawRadar(canvas, world, id)`: draws the rotating circuit and racers onto the HUD canvas.
 - `textTexture`, `texture`, `quadRibbon`, `label`, `mesh`, and `mat`: generate reusable visual materials, geometry, labels, and procedural textures.
 
 ### `src/vehicles.js`
 
-- `buildVehicle(options)`: builds one of five selected procedural vehicle bodies and returns animation references.
-- `material`, `part`, `box`, `rod`, `tube`, and `oval`: construct standard vehicle parts.
-- `shell`: generates smooth custom body shells from longitudinal profile stations.
-- `pane`: generates curved windshield geometry.
-- `wheel`: builds tire, sidewall, rim, disc, spokes, hub, bolts, and tread with separate steering and rolling pivots.
-- `spoiler`: creates supports, foil, and carbon details.
-- `driver`: creates helmet, visor, suit, hands, arms, steering wheel, and driver pivot.
-- `batch`: merges compatible meshes by material to reduce per-kart draw calls.
+- `preloadVehicleAssets(loader, options)`: fetches all four GLB files, retries failed requests once, reports progress, and records only successful models as ready.
+- `normalizeTemplate(scene, car)`: rotates, centers, grounds, and scales an imported model from catalog metadata.
+- `cloneModel(template)`: creates disposable geometry and material instances while retaining shared embedded textures.
+- `buildVehicle(options)`: clones one of four supplied vehicle models and adds body animation pivots, racer-color markers, and boost exhaust.
+- `glowMarker(group, color, car)`: adds the synchronized racer-color pennant, beacon, lamps, and underglow without tinting the authored livery.
+- `exhaustEffect(parent, car)`: positions boost flames using per-vehicle metadata.
 
 ### `src/students.js`
 
@@ -463,8 +461,8 @@ Each player contains identity, name, approved color, car ID, bot state, transfor
 ### `src/main.js`
 
 - `storageGet` and `storageSet`: safely read and write preferences.
-- `selectedCar` and `selectedPaint`: validate and persist garage selections.
-- `syncGarage`: updates car buttons, paint buttons, preview, and menu-scene vehicle.
+- `selectedCar` and `selectedColor`: validate and persist garage selections.
+- `syncGarage`: updates vehicle buttons, racer-color buttons, preview, and menu-scene vehicle.
 - `racer`: sanitizes and stores the current racer name.
 - `settings`: derives race or time-trial settings from the menu.
 - `show`: changes major interface view.
@@ -478,7 +476,7 @@ Each player contains identity, name, approved color, car ID, bot state, transfor
 - `receive`: processes guest or host protocol messages according to authority.
 - `transport`: creates a configured `RoomConnection` and disconnect behavior.
 - `createRoom`: hosts a private lobby.
-- `joinRoom`: joins a private lobby and sends player identity, car, and paint.
+- `joinRoom`: joins a private lobby and sends player identity, car, and racer color.
 - `practice`: starts local Race or Time Trial.
 - `beginVisual`: initializes an active round and optional ghost.
 - `start`: validates lobby readiness and begins the host race.
@@ -513,7 +511,7 @@ Each player contains identity, name, approved color, car ID, bot state, transfor
 
 ### `src/car-catalog.js`
 
-- `CARS`: immutable metadata for the six blueprint vehicle bodies.
+- `CARS`: immutable metadata for the four supplied vehicle bodies and their render transforms.
 - `DEFAULT_CAR`: `apex`.
 - `normalizeCar(value)`: accepts a known car ID or returns the default.
 
@@ -532,4 +530,4 @@ Each player contains identity, name, approved color, car ID, bot state, transfor
 
 ## Current automated coverage
 
-The test suite covers room exchange, room validation, game namespaces, message validation, backpressure, disconnects, eight-player limits, unauthorized inbound connections, connection cancellation, race-result penalties, record ordering, ghost interpolation, rematches, countdown, sanitized inputs, acceleration, boost, drift tiers, ramps, gravity, checkpoints, resets, boundaries, AI race completion, furniture collisions, items, shields, hazards, giant students, shared car selection, shared paint, names, procedural vehicle geometry, steering pivots, wheel-roll pivots, responsive UI, WebGL rendering, real two-player WebRTC movement, authoritative synchronization, and host loss.
+The test suite covers room exchange, room validation, game namespaces, message validation, backpressure, disconnects, eight-player limits, unauthorized inbound connections, connection cancellation, race-result penalties, record ordering, ghost interpolation, rematches, countdown, sanitized inputs, acceleration, boost, drift tiers, ramps, gravity, checkpoints, resets, boundaries, AI race completion, furniture collisions, items, shields, hazards, giant students, shared vehicle selection, shared racer colors, names, GLB asset integrity, model normalization, load retries, readiness failure, responsive UI, WebGL rendering, real two-player WebRTC movement, authoritative synchronization, and host loss.
