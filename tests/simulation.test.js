@@ -105,6 +105,16 @@ test('item boxes award library items and activation is host-authoritative and se
  const state=snapshot(w);assert.ok(Array.isArray(state.hazards));assert.ok(Array.isArray(state.projectiles));
 });
 
+test('item boxes disable after one pickup, respawn, and bots use the same item path',()=>{
+ const w=active({trackId:'ut-campus-grand-prix'}),player=w.players[0],bot=addPlayer(w,'bot','Bot',{bot:true});
+ const box=trackById(w.trackId).itemBoxes[0];Object.assign(player,{x:box.x,z:box.z,y:box.y||0});stepWorld(w,1/60);
+ assert.ok(player.item);assert.ok(w.itemBoxes[box.id].availableAt>w.time);
+ Object.assign(bot,{item:null,x:box.x,z:box.z,y:box.y||0});stepWorld(w,1/60);assert.equal(bot.item,null);
+ advance(w,4.1);assert.equal(w.itemBoxes[box.id].availableAt,0);
+ Object.assign(bot,{item:null,_lastPickup:-5,x:box.x,z:box.z,y:box.y||0});stepWorld(w,1/60);assert.ok(w.itemBoxes[box.id].availableAt>w.time);assert.ok(w.effects.some(effect=>effect.type==='item'&&effect.playerId===bot.id));
+ advance(w,4.1);player.item=null;Object.assign(player,{x:box.x,z:box.z,y:box.y||0});stepWorld(w,1/60);assert.ok(player.item);
+});
+
 test('book and ink hazards disrupt rivals while a citation shield absorbs one hit', () => {
  const w=active();const a=w.players[0],b=addPlayer(w,'b','Bee');
  const road=pointAtDistance(40);Object.assign(a,{x:road.x,z:road.z,heading:road.heading,item:'books'});setInput(w,a.id,{item:true});stepWorld(w,1/60);
