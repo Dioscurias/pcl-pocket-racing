@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {ribbonGeometry,roadSections} from '../src/course-world.js';
+import {curbSegments,ribbonGeometry,roadSections} from '../src/course-world.js';
 import {TRACKS,inFlightRange} from '../src/tracks.js';
 test('road has shared edges and upward-facing triangles instead of overlapping segment wedges',()=>{
  for(const t of TRACKS)for(const section of roadSections(t)){
@@ -25,4 +25,24 @@ test('UT Grand Prix road is a continuous outdoor loop with campus landmarks',()=
  assert.equal(track.structures.find(item=>item.id==='waller').water,true);
  assert.ok(sections.flat().some(point=>point.z<-150),'course must reach the 21st Street and DKR side');
  assert.ok(track.centerline.some(point=>point.z>200),'course must reach Dean Keeton');
+});
+
+test('UT Grand Prix curbs are flat, alternating, and do not stack edge outlines',()=>{
+ const track=TRACKS.find(item=>item.id==='ut-campus-grand-prix'),curbs=curbSegments(track);
+ assert.ok(curbs.length>100);
+ assert.ok(curbs.every(curb=>curb.height<=.03));
+ assert.ok(curbs.every(curb=>curb.length===3&&curb.gap===0));
+ for(const side of [-1,1]){
+  const sideCurbs=curbs.filter(curb=>curb.side===side);
+  for(let index=1;index<sideCurbs.length;index++)assert.notEqual(sideCurbs[index].color,sideCurbs[index-1].color);
+ }
+});
+
+test('UT Grand Prix trims curbs beside nonadjacent road sections',()=>{
+ const track=TRACKS.find(item=>item.id==='ut-campus-grand-prix'),curbs=curbSegments(track);
+ for(const curb of curbs)for(const point of track.centerline){
+  const delta=Math.abs(point.s-curb.s),cyclic=Math.min(delta,track.length-delta);
+  if(cyclic<24)continue;
+  assert.ok(Math.hypot(point.x-curb.x,point.z-curb.z)>track.trackWidth*.88,'curb is too close to a second road section');
+ }
 });

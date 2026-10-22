@@ -9,7 +9,7 @@ export const ITEMS=Object.freeze(['sprint','shield','books','ink','cart']);
 export function createWorld(options={}){
  const o=options.settings||options,mode=o.mode==='time-trial'?'time-trial':'race';
  const trackId=trackById(o.trackId).id;
- return{phase:'lobby',time:0,countdown:0,trackId,players:[],effects:[],effectSerial:0,hazards:[],projectiles:[],itemSerial:0,settings:{mode,trackId,laps:mode==='time-trial'?1:clamp(Math.floor(finite(o.laps,3)),1,9),bots:mode==='time-trial'?0:clamp(Math.floor(finite(o.bots,3)),0,7)},winner:null,round:0,raceStart:0,finishDeadline:null,remaining:null,_inputs:{}};
+ return{phase:'lobby',time:0,countdown:0,trackId,players:[],effects:[],effectSerial:0,hazards:[],projectiles:[],itemSerial:0,itemBoxes:Object.fromEntries(trackById(trackId).itemBoxes.map(box=>[box.id,{availableAt:0,spawnedAt:0}])),settings:{mode,trackId,laps:mode==='time-trial'?1:clamp(Math.floor(finite(o.laps,3)),1,9),bots:mode==='time-trial'?0:clamp(Math.floor(finite(o.bots,3)),0,7)},winner:null,round:0,raceStart:0,finishDeadline:null,remaining:null,_inputs:{}};
 }
 function emit(w,type,p){w.effects.push({id:++w.effectSerial,type,x:p.x,y:p.y,z:p.z,time:w.time,playerId:p.id,tier:p.tier||0,item:p.item||null});if(w.effects.length>70)w.effects.shift();}
 function spawn(w,p,index=w.players.indexOf(p)){
@@ -30,9 +30,10 @@ export function startMatch(w){
  if(w.settings.mode==='time-trial')w.players=w.players.filter(p=>!p.bot);
  else {const names=['Stacks','Index','Dewey','Folio','Atlas','Quill','Spine'];while(w.players.filter(p=>p.bot).length<w.settings.bots&&w.players.length<8){const i=w.players.filter(p=>p.bot).length;addPlayer(w,`bot-${i}`,names[i],{bot:true});}}
  w.round++;w.phase='countdown';w.countdown=3;w.winner=null;w.effects=[];w.finishDeadline=null;w.remaining=null;
+ for(const state of Object.values(w.itemBoxes))Object.assign(state,{availableAt:0,spawnedAt:w.time});
  for(const p of w.players)spawn(w,p);
 }
-export function resetMatch(w){w.phase='lobby';w.countdown=0;w.winner=null;w.finishDeadline=null;w.remaining=null;w.effects=[];for(const p of w.players)spawn(w,p);}
+export function resetMatch(w){w.phase='lobby';w.countdown=0;w.winner=null;w.finishDeadline=null;w.remaining=null;w.effects=[];for(const state of Object.values(w.itemBoxes))Object.assign(state,{availableAt:0,spawnedAt:w.time});for(const p of w.players)spawn(w,p);}
 function resetKart(w,p){const track=course(w),gate=track.checkpoints[inFlightRange(track,track.checkpoints[p.lastCheckpoint].s)?Math.max(0,p.lastCheckpoint-2):p.lastCheckpoint];p.x=gate.x+Math.sin(gate.heading)*2;p.z=gate.z-Math.cos(gate.heading)*2;p.y=surfaceAt(track,p.x,p.z,gate.y||0);p.heading=gate.heading;p.roll=p.lean=0;p.vx=p.vz=p.vy=p.speed=0;p.grounded=true;p.gliding=false;p.drift=0;p.penalty+=2;p._lapPenalty+=2;p._stuck=p._flipped=0;emit(w,'reset',p);}
 function distanceToSegment(x,z,a,b){const dx=b.x-a.x,dz=b.z-a.z,t=clamp(((x-a.x)*dx+(z-a.z)*dz)/(dx*dx+dz*dz),0,1);return Math.hypot(x-a.x-dx*t,z-a.z-dz*t);}
 function onShortcut(track,p){return track.shortcuts.some(s=>s.points.some((point,i)=>i&&distanceToSegment(p.x,p.z,s.points[i-1],point)<s.width/2));}
@@ -75,7 +76,7 @@ export function botInput(w,p){
  if(p.finishedAt!==null)return emptyInput();
  const track=course(w),near=nearestTrack(track,p.x,p.z),look=clamp(7+p.speed*.27,7,15),target=pointAtDistance(track,near.s+look),desired=Math.atan2(target.x-p.x,p.z-target.z),error=angle(desired-p.heading),future=pointAtDistance(track,near.s+25),bend=Math.abs(angle(future.heading-near.heading));
  const desiredSpeed=bend>.9?15:bend>.5?20:28,throttle=p.speed>desiredSpeed?-.25:Math.abs(error)>1.2?.25:1;
- return{throttle,steer:clamp(error*1.65,-1,1),drift:Math.abs(error)>.22&&Math.abs(error)<.55&&p.speed>16&&near.distance<3,boost:bend<.22&&Math.abs(error)<.12&&p.energy>30,reset:false};
+ return{throttle,steer:clamp(error*1.65,-1,1),drift:Math.abs(error)>.22&&Math.abs(error)<.55&&p.speed>16&&near.distance<3,boost:bend<.22&&Math.abs(error)<.12&&p.energy>30,item:!!p.item&&p.speed>12&&bend<.35,reset:false};
 }
 function driftTier(charge){return charge>=90?3:charge>=60?2:charge>=30?1:0;}
 function disrupt(w,p,type){
@@ -98,10 +99,11 @@ export function useItem(w,p){
 function updateItems(w,dt){
  w.hazards=w.hazards.filter(h=>h.expires>w.time);
  w.projectiles=w.projectiles.filter(q=>q.expires>w.time);
+ for(const state of Object.values(w.itemBoxes))if(state.availableAt&&state.availableAt<=w.time){state.availableAt=0;state.spawnedAt=w.time;}
  for(const q of w.projectiles){const candidates=w.players.filter(p=>p.id!==q.owner&&p.finishedAt===null),target=candidates.sort((a,b)=>Math.hypot(a.x-q.x,a.z-q.z)-Math.hypot(b.x-q.x,b.z-q.z))[0];if(target){const dx=target.x-q.x,dz=target.z-q.z,d=Math.max(.001,Math.hypot(dx,dz));q.vx+=(dx/d*28-q.vx)*Math.min(1,dt*1.8);q.vz+=(dz/d*28-q.vz)*Math.min(1,dt*1.8);}q.x+=q.vx*dt;q.z+=q.vz*dt;}
  for(const p of w.players){
   if(p.finishedAt!==null)continue;
-  for(const box of course(w).itemBoxes)if(!p.item&&Math.abs(p.y-(box.y||0))<3&&w.time-p._lastPickup>2&&Math.hypot(p.x-box.x,p.z-box.z)<2.5){p._lastPickup=w.time;grantItem(w,p);break;}
+  for(const box of course(w).itemBoxes){const state=w.itemBoxes[box.id];if(!p.item&&state.availableAt<=w.time&&Math.abs(p.y-(box.y||0))<3&&w.time-p._lastPickup>2&&Math.hypot(p.x-box.x,p.z-box.z)<2.5){p._lastPickup=w.time;state.availableAt=w.time+4;grantItem(w,p);break;}}
   for(let i=w.hazards.length-1;i>=0;i--){const h=w.hazards[i];if(h.owner!==p.id&&Math.hypot(p.x-h.x,p.z-h.z)<1.55){disrupt(w,p,h.type);w.hazards.splice(i,1);}}
   for(let i=w.projectiles.length-1;i>=0;i--){const q=w.projectiles[i];if(q.owner!==p.id&&Math.hypot(p.x-q.x,p.z-q.z)<1.7){disrupt(w,p,'cart');w.projectiles.splice(i,1);}}
  }
