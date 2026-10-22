@@ -7,8 +7,8 @@ import {CARS} from '../src/car-catalog.js';
 
 test('kart model and collision footprint use the approved miniature scale',()=>{assert.equal(VEHICLE_SCALE,.65);assert.equal(KART_RADIUS,.56);const {group}=buildVehicle();assert.equal(group.scale.x,.65);assert.equal(group.scale.y,.65);assert.equal(group.scale.z,.65);});
 
-test('five finite, distinct vehicle bodies include Apex Formula and a two-wheel motorcycle',()=>{
- assert.deepEqual(CARS.map(car=>car.name),['Apex','Apex Formula','GT Roadster','Rally Coupe','Motorcycle']);
+test('seven finite, distinct vehicle bodies include the new Formula X and Muscle GT',()=>{
+ assert.deepEqual(CARS.map(car=>car.name),['Apex','Apex Formula','GT Roadster','Rally Coupe','Motorcycle','Formula X','Muscle GT']);
  const signatures=[];
  for(const car of CARS){const vehicle=buildVehicle({car:car.id,color:0x1859b7});
   assert.equal(vehicle.model,car.id);assert.equal(vehicle.paint.color.getHex(),0x1859b7);
@@ -19,7 +19,7 @@ test('five finite, distinct vehicle bodies include Apex Formula and a two-wheel 
   let signature=0,meshes=0;vehicle.group.traverse(o=>{if(o.isMesh){meshes++;const positions=o.geometry.getAttribute('position');for(let i=0;i<positions.array.length;i++){const v=positions.array[i];assert.ok(Number.isFinite(v));signature+=v*((i%17)+1);}}});
   assert.ok(meshes<40,`${car.id}: ${meshes} draw calls`);signatures.push(signature);
  }
- assert.equal(new Set(signatures).size,5);
+ assert.equal(new Set(signatures).size,7);
 });
 
 test('motorcycle has its own agile handling profile and lean pivot',()=>{

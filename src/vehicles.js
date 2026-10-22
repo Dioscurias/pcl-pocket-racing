@@ -58,12 +58,12 @@ export function buildVehicle({car='apex',color=0x1859b7}={}){
  const model=normalizeCar(car),group=new THREE.Group(),body=new THREE.Group();group.add(body);
  if(model==='motorcycle')return buildMotorcycle(color);
  group.name=`vehicle-${model}`;group.userData.model=model;group.scale.setScalar(VEHICLE_SCALE);
- const paint=material(color,{metalness:.62,roughness:.22}),black=material('#11151c',{roughness:.42}),rubber=material('#181b20',{roughness:.94}),alloy=material('#c2c9cc',{metalness:.85,roughness:.24}),carbon=material('#242831',{metalness:.25,roughness:.53}),glass=material('#16212d',{metalness:.48,roughness:.1,side:THREE.DoubleSide}),brake=material('#6a6d70',{metalness:.7,roughness:.45}),suit=material('#d1d5dd',{roughness:.75}),light=material('#e6edf2',{metalness:.3,roughness:.16}),red=material('#9b1920',{emissive:'#5c080b',emissiveIntensity:.35});
+ const paint=material(color,{metalness:.62,roughness:.22}),black=material('#11151c',{roughness:.42}),rubber=material('#181b20',{roughness:.94}),alloy=material('#c2c9cc',{metalness:.85,roughness:.24}),carbon=material('#242831',{metalness:.25,roughness:.53}),glass=material('#16212d',{metalness:.48,roughness:.1,side:THREE.DoubleSide}),brake=material('#6a6d70',{metalness:.7,roughness:.45}),suit=material('#d1d5dd',{roughness:.75}),light=material('#e6edf2',{metalness:.3,roughness:.16}),red=material('#9b1920',{emissive:'#5c080b',emissiveIntensity:.35}),lime=material('#d9ff16',{metalness:.42,roughness:.25}),violet=material('#7b26d8',{metalness:.5,roughness:.24}),white=material('#fff8e8',{metalness:.35,roughness:.24});
  const paints={paint,black,rubber,alloy,carbon,glass,brake,suit};
  box(body,carbon,[1.48,.12,2.8],[0,.35,0]);
- const sports=model==='roadster'||model==='coupe';
+ const sports=model==='roadster'||model==='coupe'||model==='muscle-gt';
  if(!sports){
-  const formula=model==='apex-formula';
+  const formula=model==='apex-formula'||model==='formula-x',formulaX=model==='formula-x';
   shell(body,paint,formula?[[-1.5,.12,.53,.07],[-1.3,.37,.62,.18],[-.7,.44,.75,.23],[-.15,.41,.81,.24]]:[[-1.66,.08,.43,.06],[-1.25,.23,.56,.13],[-.65,.39,.72,.21],[-.12,.4,.79,.24]]);
   for(const side of [-1,1]){
    shell(body,paint,[[-.38,.11,.58,.12],[0,.18,.68,.24],[.65,.18,.7,.3],[1.12,.12,.66,.23]],side*.56);
@@ -81,6 +81,12 @@ export function buildVehicle({car='apex',color=0x1859b7}={}){
   tube(body,paint,[[-.39,.89,-.35],[-.28,formula?1.3:1.17,-.18],[0,formula?1.34:1.2,-.17],[.28,formula?1.3:1.17,-.18],[.39,.89,-.35]],.022);
   for(const side of [-1,1]){rod(body,alloy,[side*.39,.95,-.22],[side*.64,1.03,-.32],.015);oval(body,paint,[side*.65,1.04,-.32],[.105,.055,.07]);}
   if(formula){oval(body,black,[0,.56,-1.48],[.23,.1,.04]);for(const side of [-1,1])oval(body,light,[side*.43,.68,-1.1],[.075,.075,.04]);}
+  if(formulaX){
+   // Fixed livery panels retain Formula X's neon lime and violet identity.
+   box(body,lime,[.22,.12,1.65],[0,.87,-.42],.05);box(body,violet,[.11,.13,1.53],[0,.99,-.42],.04);
+   for(const side of [-1,1]){box(body,lime,[.55,.09,.18],[side*.64,.58,.38],.035);box(body,violet,[.13,.075,1.26],[side*.49,.73,-.17],.025);box(body,lime,[.17,.07,.36],[side*.67,.38,-1.34],.02);}
+   box(body,violet,[1.82,.05,.12],[0,1.38,1.22],.015);
+  }
  }else{
   // Separated fenders and side sills preserve the open cockpit and oversized toy tires.
   shell(body,paint,[[-1.62,.47,.57,.11],[-1.4,.65,.63,.22],[-.9,.64,.74,.23],[-.42,.54,.83,.17]]);
@@ -108,6 +114,12 @@ export function buildVehicle({car='apex',color=0x1859b7}={}){
    shell(body,paint,[[-.22,.46,1.46,.05],[0,.54,1.49,.11],[.45,.5,1.46,.08],[.65,.4,1.38,.05]]);
    pane(body,glass,.54,[.96,.98],[1.46,.57]);
    for(const side of [-1,1]){const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute([side*.535,1.43,-.18,side*.535,1.43,.53,side*.535,1.03,.86,side*.535,1.03,-.55],3));geo.setIndex([0,1,2,0,2,3]);geo.computeVertexNormals();part(body,geo,glass);rod(body,paint,[side*.53,1.03,.43],[side*.48,1.46,.4],.027);tube(body,paint,[[side*.48,1.48,-.18],[side*.55,1.04,-.6]],.035);}
+  }else if(model==='muscle-gt'){
+   // A broad, squared toy muscle body with scoop, wing, and twin race stripes.
+   shell(body,paint,[[-1.08,.44,.78,.16],[-.6,.65,.88,.3],[.18,.66,.9,.34],[.72,.48,.81,.2]]);
+   box(body,black,[.88,.19,.55],[0,.9,-.87],.05);box(body,white,[.2,.17,1.82],[-.18,1.01,-.04],.035);box(body,white,[.2,.17,1.82],[.18,1.01,-.04],.035);
+   box(body,black,[.48,.22,.44],[0,1.16,-.44],.055);box(body,glass,[.87,.34,.57],[0,1.22,.35],.11);spoiler(body,paint,carbon,alloy,{wide:1.78,height:1.22,z:1.42});
+   for(const side of [-1,1]){box(body,black,[.12,.22,.5],[side*.76,.7,.42],.025);oval(body,light,[side*.43,.72,-1.42],[.19,.08,.045]);box(body,white,[.075,.06,.76],[side*.38,1.04,-.1],.015);}
   }else for(const side of [-1,1])tube(body,paint,[[side*.1,.88,.6],[side*.1,1.42,.59],[side*.34,1.44,.59],[side*.37,.87,.67]],.045);
   spoiler(body,paint,carbon,alloy,{wide:1.91,height:1.25,z:1.28});
  }

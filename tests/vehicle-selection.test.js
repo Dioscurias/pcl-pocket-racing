@@ -16,6 +16,6 @@ test('invalid car selections fall back safely and AI racers use the full collect
  const host=addPlayer(world,'host','Nico',{car:{bad:true},color:0x123456});assert.equal(host.car,'apex');assert.equal(host.color,0x1677ff);
  startMatch(world);
  const cars=world.players.map(p=>p.car);
- assert.ok(cars.every(c=>['apex','apex-formula','roadster','coupe','motorcycle'].includes(c)));
- assert.equal(new Set(cars).size,5);
+ assert.ok(cars.every(c=>['apex','apex-formula','roadster','coupe','motorcycle','formula-x','muscle-gt'].includes(c)));
+ assert.equal(new Set(cars).size,7);
 });
