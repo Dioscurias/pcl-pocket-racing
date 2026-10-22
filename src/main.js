@@ -9,8 +9,11 @@ import {mountInterface,escape,raceTime} from './interface.js';
 import {readRecords,saveLap,sampleGhost} from './records.js';
 import {GameAudio} from './audio.js';
 import {GaragePreview} from './garage-preview.js';
+import {preloadVehicleAssets} from './vehicles.js';
 
-const ui=mountInterface(),$=ui.$,audio=new GameAudio();window.addEventListener('pointerdown',()=>audio.start(),{once:true});window.addEventListener('keydown',()=>audio.start(),{once:true});let scene;
+const ui=mountInterface(),$=ui.$,audio=new GameAudio();window.addEventListener('pointerdown',()=>audio.start(),{once:true});window.addEventListener('keydown',()=>audio.start(),{once:true});
+await preloadVehicleAssets();
+let scene;
 try{scene=new LibraryScene($('viewport'));}catch(error){document.querySelector('#app').innerHTML='<div class="fatal-error"><h1>WebGL is unavailable.</h1><p>Enable hardware acceleration in your browser, then reload.</p><button onclick="location.reload()">Reload</button></div>';throw error;}
 const keys=new Set();let network=null,world=createWorld(),localId='local',view='home',isHost=true,solo=false,paused=false,ready=false,predicted=null,lastSnapshot=0,lastBroadcast=0,lastInputSend=0,lastHud=0,lastAudioEffect=0,accumulator=0,lastTick=performance.now(),roundShown=-1,connectionGeneration=0,lapSamples=[],sampleLap=0,lastSample=0,previousGhost=null,savedLaps=0,resetQueued=false;
 for(let i=0;i<4;i++)addPlayer(world,'preview-'+i,['Nico','Folio','Atlas','Index'][i],{car:CARS[i].id});
