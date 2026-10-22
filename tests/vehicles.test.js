@@ -40,6 +40,7 @@ test('supplied meshes preload, normalize, clone and preserve the scene animation
   assert.equal(vehicle.group.scale.x,VEHICLE_SCALE);assert.ok(vehicle.body.isGroup);assert.ok(vehicle.driver.isGroup);
   assert.ok(vehicle.exhaust.isGroup);assert.deepEqual(vehicle.wheels,[]);assert.deepEqual(vehicle.front,[]);
   assert.ok(vehicle.group.getObjectByName(`source:${car.id}`));
+  const flag=vehicle.group.getObjectByName('player-color-flag');assert.ok(flag?.isGroup);assert.equal(vehicle.paint.color.getHex(),0x28ccff);
   const bounds=new THREE.Box3().setFromObject(vehicle.group);
   assert.ok(bounds.min.y>=-.02,`${car.id} should sit on the ground`);
   assert.ok(bounds.max.y<2.5,`${car.id} should remain toy sized`);
@@ -58,4 +59,9 @@ test('motorcycle keeps its dedicated handling and lean mechanism',()=>{
  assert.ok(bike.handling.steering>kart.handling.steering);
  assert.ok(bike.handling.radius<kart.handling.radius);
  assert.ok(buildVehicle({car:bike.id}).lean?.isGroup);
+});
+
+test('failed asset requests retry and never report the supplied roster as ready',async()=>{
+ let attempts=0;const results=await preloadVehicleAssets({loadAsync:async()=>{attempts++;throw new Error('offline');}},{retries:1});
+ assert.equal(attempts,CARS.length*2);assert.equal(results.every(result=>result.loaded===false),true);assert.equal(vehicleAssetsReady(),false);
 });

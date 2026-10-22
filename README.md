@@ -38,10 +38,10 @@ Omit these variables to use PeerJS's default cloud and ICE settings. A self-host
 
 The angular perimeter, central stair/elevator core, eastern stacks 3L–3Q, western stacks and Reflection Space are informed by [UT Libraries' public PCL floor plans](https://www.lib.utexas.edu/visit-us/locations/pcl/floor-plan). Geometry is authored in gameplay units. Course tape, ramps, shortcuts, furniture scale and toy racing are fictional additions, not a surveyed interior model. Reference photographs and floor-plan images are not redistributed. This is an independent arcade recreation, not an official university game.
 
-Kart meshes, drivers, room geometry, books, textures and audio are generated locally. Inter Tight and IBM Plex Mono licenses are bundled with the fonts. Phosphor icon paths retain their MIT attribution. Three.js and PeerJS are MIT licensed.
+The four vehicle GLB files and their embedded materials are supplied project assets. Room geometry, books and audio are generated locally. Inter Tight and IBM Plex Mono licenses are bundled with the fonts. Phosphor icon paths retain their MIT attribution. Three.js and PeerJS are MIT licensed.
 
 ## Reference car collection
 
-Choose one of six blueprint vehicles in the main menu: Monster Buggy, Velocity Bike, Nova 88, Solar Formula, Volt Formula, or Muscle GT. Each has a dedicated procedural 3D body and deterministic arcade handling. Velocity Bike uses a lighter two-wheel mechanism with automatic lean. The selection is remembered on this device and synchronized by the lobby host, including on rematches. Player paint affects secondary trim while the defining livery remains consistent on every screen.
+Choose one of four supplied vehicle designs in the main menu: Monster Buggy, Velocity Bike, Nova 88, or Apex Formula. Each keeps its authored model, textures and deterministic arcade handling. Velocity Bike uses a lighter two-wheel mechanism with automatic lean. The selection is remembered on this device and synchronized by the lobby host, including on rematches. Racer color appears on an underglow, front markers and a flag while the authored livery remains unchanged.
 
 Music, engine tones, and effects are synthesized in the browser with the Web Audio API. No recorded or third-party audio files are bundled. Mute and master volume are stored on the device, and audio begins only after user interaction.

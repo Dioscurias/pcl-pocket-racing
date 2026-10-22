@@ -73,16 +73,14 @@ The control hint appears at the start of a round and fades after 6.5 seconds. In
 
 ## Kart selection
 
-Six vehicles use deterministic arcade handling profiles:
+Four supplied GLB vehicles use deterministic arcade handling profiles:
 
-1. **Monster Buggy**: lime and cyan body, exposed suspension, oversized tires, roof scoop, rear wing, number 55.
-2. **Velocity Bike**: cyan and coral full fairing, black visor, rider, yellow accents, sport-bike stance.
-3. **Nova 88**: magenta and navy canopy, four huge wheels, wedge nose, rear loop wing, number 88.
-4. **Solar Formula**: yellow open-wheel body, cyan and coral aero ribbons, purple wheels, number 7.
-5. **Volt Formula**: lime and purple modern Formula body, halo cockpit, slick tires, number 01.
-6. **Muscle GT**: red wide-body coupe, twin white stripes, hood scoop, rear wing, number 24.
+1. **Monster Buggy**: lime and cyan body, exposed suspension, oversized tires and rear wing.
+2. **Velocity Bike**: blue and orange sport bike with a modeled rider and dedicated lean behavior.
+3. **Nova 88**: magenta and navy canopy racer with four wide wheels and a rear loop wing.
+4. **Apex Formula**: lime and purple open-wheel racer with exposed suspension and aero wings.
 
-Each procedural kart contains glossy bodywork, continuous curved shells, carbon surfaces, alloy components, modeled tires, rims, brake discs, spokes, tread blocks, suspension details, exhaust pipes, lights, cockpit glass, a steering wheel, spoilers, and a helmeted driver. Front wheels steer. All wheels roll. The body leans under steering, bounces with speed and suspension movement, and reacts while airborne. The driver leans into turns. Exhaust flames appear during boost and turbo states. Drift sparks change from blue to gold to purple as drift charge increases.
+The supplied models preserve their embedded color, normal and metallic-roughness textures. Their single-mesh construction keeps the authored silhouettes intact. The body leans under steering, bounces with speed and reacts while airborne. The motorcycle uses its own lean pivot. Exhaust flames appear during boost and turbo states. Drift sparks change from blue to gold to purple as drift charge increases. A racer-color flag, lamps and underglow identify each player without tinting the original livery.
 
 Vehicle render scale is `0.65`. Cars use collision radii near `0.56` world units. The motorcycle uses a narrower footprint, quicker acceleration, sharper steering, lighter grip, faster drift charge, and automatic visual lean. All profiles run through the same fixed-step authoritative simulation.
 

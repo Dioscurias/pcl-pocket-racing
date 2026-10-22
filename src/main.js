@@ -9,10 +9,15 @@ import {mountInterface,escape,raceTime} from './interface.js';
 import {readRecords,saveLap,sampleGhost} from './records.js';
 import {GameAudio} from './audio.js';
 import {GaragePreview} from './garage-preview.js';
-import {preloadVehicleAssets} from './vehicles.js';
+import {preloadVehicleAssets,vehicleAssetsReady} from './vehicles.js';
 
 const ui=mountInterface(),$=ui.$,audio=new GameAudio();window.addEventListener('pointerdown',()=>audio.start(),{once:true});window.addEventListener('keydown',()=>audio.start(),{once:true});
-await preloadVehicleAssets();
+const assetLoading=$('asset-loading'),loadingControls=[...document.querySelectorAll('#front button,#front input,#front select')];loadingControls.forEach(control=>control.disabled=true);
+const assetResults=await preloadVehicleAssets(undefined,{retries:1,onProgress:(completed,total)=>{assetLoading.querySelector('strong').textContent=`${completed} / ${total}`;}});
+if(!vehicleAssetsReady()){
+ const failed=assetResults.filter(result=>!result.loaded).map(result=>CARS.find(car=>car.id===result.id)?.name).filter(Boolean);assetLoading.classList.add('is-error');assetLoading.innerHTML=`<span>Vehicle download failed</span><strong>${failed.join(' / ')}</strong><button id="retry-assets" type="button">Retry</button>`;$('retry-assets').onclick=()=>location.reload();
+}else{
+assetLoading.remove();loadingControls.forEach(control=>control.disabled=false);
 let scene;
 try{scene=new LibraryScene($('viewport'));}catch(error){document.querySelector('#app').innerHTML='<div class="fatal-error"><h1>WebGL is unavailable.</h1><p>Enable hardware acceleration in your browser, then reload.</p><button onclick="location.reload()">Reload</button></div>';throw error;}
 const keys=new Set();let network=null,world=createWorld(),localId='local',view='home',isHost=true,solo=false,paused=false,ready=false,predicted=null,lastSnapshot=0,lastBroadcast=0,lastInputSend=0,lastHud=0,lastAudioEffect=0,accumulator=0,lastTick=performance.now(),roundShown=-1,connectionGeneration=0,lapSamples=[],sampleLap=0,lastSample=0,previousGhost=null,savedLaps=0,resetQueued=false;
@@ -70,3 +75,4 @@ let frameTime=performance.now();function frame(now){const dt=Math.min(.05,(now-f
 world.players[0].car=selectedCar();
 const invite=new URL(location.href).searchParams.get('room');if(invite){$('room-code').value=invite.slice(0,6).toUpperCase();$('network-status').textContent='Enter your name, then join your friend’s grid.';}show('home');
 window.__pcl={getState:()=>snapshot(world),getLocalId:()=>localId,getNetwork:()=>({code:network?.code,isHost,connected:network?.connected,peers:network?.peers.size||0}),getView:()=>view,getRecords:()=>readRecords(),getRenderInfo:()=>({calls:scene.renderer.info.render.calls,triangles:scene.renderer.info.render.triangles})};window.addEventListener('beforeunload',()=>network?.close());
+}
