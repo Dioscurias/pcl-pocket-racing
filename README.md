@@ -42,6 +42,6 @@ Kart meshes, drivers, room geometry, books, textures and audio are generated loc
 
 ## Reference car collection
 
-Choose a vehicle in the main menu before starting or joining a race. Apex and Apex Formula are open-wheel designs, GT Roadster is open-top, Rally Coupe has a closed cockpit, and Motorcycle uses a lighter two-wheel model with dedicated agile handling and lean animation. The selection is remembered on this device and synchronized by the lobby host, including on rematches. Each vehicle has deterministic arcade handling and an appropriate collision footprint. Paint is assigned by the host so each racer keeps a distinct color on every screen. Vehicle shapes are original procedural models with no licensed manufacturer branding or external model downloads.
+Choose one of six blueprint vehicles in the main menu: Monster Buggy, Velocity Bike, Nova 88, Solar Formula, Volt Formula, or Muscle GT. Each has a dedicated procedural 3D body and deterministic arcade handling. Velocity Bike uses a lighter two-wheel mechanism with automatic lean. The selection is remembered on this device and synchronized by the lobby host, including on rematches. Player paint affects secondary trim while the defining livery remains consistent on every screen.
 
 Music, engine tones, and effects are synthesized in the browser with the Web Audio API. No recorded or third-party audio files are bundled. Mute and master volume are stored on the device, and audio begins only after user interaction.
