@@ -24,7 +24,9 @@ test('campus material families preserve realistic PBR response without emissive 
  for(const key of ['asphalt','grass','brick','limestone','roof','concrete','rubber']){
   const material=CAMPUS_MATERIALS[key];
   assert.ok(material,missingKey(key));
-  assert.ok(material.color&&material.normal&&material.roughness);
+  assert.ok(material.color&&material.normal&&material.roughnessMap);
+  assert.match(material.roughnessMap,/^\/assets\/environment\/textures\/.+\.ktx2$/);
+  assert.equal(typeof material.roughness,'number');
   assert.equal(material.emissive,undefined);
  }
 });

@@ -25,7 +25,7 @@ export const CREDITS_PATH=`${ROOT}/CREDITS.md`;
 const family=(slug,{repeat=[4,4],roughness=.72,metalness=0,color='#ffffff',normalScale=1,ao=true}={})=>Object.freeze({
  color:`${ROOT}/textures/${slug}/${slug}-color.ktx2`,
  normal:`${ROOT}/textures/${slug}/${slug}-normal.ktx2`,
- roughness:`${ROOT}/textures/${slug}/${slug}-roughness.ktx2`,
+ roughnessMap:`${ROOT}/textures/${slug}/${slug}-roughness.ktx2`,
  ao:ao?`${ROOT}/textures/${slug}/${slug}-ao.ktx2`:null,
  repeat,roughness,metalness,color,normalScale,
 });
@@ -70,7 +70,7 @@ export function loadCampusMaterialLibrary(renderer){
  materialLoading=Promise.all(Object.entries(CAMPUS_MATERIALS).map(async([name,spec])=>{
   const [map,normalMap,roughnessMap,aoMap]=await Promise.all([
    load(spec.color,{srgb:true,repeat:spec.repeat}),load(spec.normal,{repeat:spec.repeat}),
-   load(spec.roughness,{repeat:spec.repeat}),load(spec.ao,{repeat:spec.repeat}),
+   load(spec.roughnessMap,{repeat:spec.repeat}),load(spec.ao,{repeat:spec.repeat}),
   ]);
   const material=materials[name];
   if(aoMap)aoMap.channel=0;
