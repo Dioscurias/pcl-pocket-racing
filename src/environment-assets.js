@@ -50,6 +50,10 @@ const materialCache=new Map();
 let materialLoading;
 let skyTexture;
 const environmentCache=new WeakMap();
+export const CAMPUS_CLOUD_BANKS=Object.freeze([
+ Object.freeze({x:.12,y:.17,scale:.85,alpha:.12}),Object.freeze({x:.42,y:.1,scale:1.08,alpha:.15}),
+ Object.freeze({x:.72,y:.2,scale:.76,alpha:.1}),Object.freeze({x:.91,y:.12,scale:.92,alpha:.13}),
+]);
 function configured(texture,{srgb=false,repeat=[1,1],anisotropy=4}={}){
  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
  texture.repeat.set(...repeat);
@@ -99,7 +103,7 @@ export function loadCampusEnvironment(renderer){
 }
 export function createCampusSkyTexture(){
  if(skyTexture)return skyTexture;
- const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d'),sky=ctx.createLinearGradient(0,0,0,1024);sky.addColorStop(0,'#167fc2');sky.addColorStop(.48,'#69c8ee');sky.addColorStop(.76,'#c5e9f2');sky.addColorStop(1,'#f1e3c7');ctx.fillStyle=sky;ctx.fillRect(0,0,canvas.width,canvas.height);
- const clouds=[[260,230,230,70],[760,150,300,82],[1290,290,250,75],[1740,170,280,82],[1050,430,190,58]];for(const [x,y,w,h] of clouds){const cloud=ctx.createRadialGradient(x,y,8,x,y,w*.55);cloud.addColorStop(0,'rgba(255,255,255,.96)');cloud.addColorStop(.55,'rgba(255,255,255,.78)');cloud.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=cloud;ctx.beginPath();ctx.ellipse(x,y,w,h,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(x-w*.22,y-h*.35,w*.36,h*.72,0,0,Math.PI*2);ctx.ellipse(x+w*.18,y-h*.28,w*.42,h*.82,0,0,Math.PI*2);ctx.fill();}
+ const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d'),sky=ctx.createLinearGradient(0,0,0,1024);sky.addColorStop(0,'#075184');sky.addColorStop(.45,'#2f9bc8');sky.addColorStop(.76,'#8bd3e9');sky.addColorStop(1,'#d7edf0');ctx.fillStyle=sky;ctx.fillRect(0,0,canvas.width,canvas.height);
+ for(const bank of CAMPUS_CLOUD_BANKS){const x=bank.x*canvas.width,y=bank.y*canvas.height,w=360*bank.scale;ctx.save();ctx.filter='blur(14px)';ctx.strokeStyle=`rgba(255,255,255,${bank.alpha})`;ctx.lineWidth=18*bank.scale;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-w*.5,y);ctx.bezierCurveTo(x-w*.2,y-22*bank.scale,x+w*.08,y+16*bank.scale,x+w*.5,y-5*bank.scale);ctx.stroke();ctx.lineWidth=8*bank.scale;ctx.beginPath();ctx.moveTo(x-w*.35,y+24*bank.scale);ctx.bezierCurveTo(x-w*.06,y+7*bank.scale,x+w*.18,y+35*bank.scale,x+w*.4,y+12*bank.scale);ctx.stroke();ctx.restore();}
  skyTexture=new THREE.CanvasTexture(canvas);skyTexture.colorSpace=THREE.SRGBColorSpace;return skyTexture;
 }

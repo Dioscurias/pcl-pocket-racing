@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as THREE from 'three';
-import {buildVehicle,preloadVehicleAssets,vehicleAssetsReady,VEHICLE_SCALE} from '../src/vehicles.js';
+import {buildVehicle,preloadVehicleAssets,vehicleAssetsReady,VEHICLE_SCALE,rollVehicleWheels} from '../src/vehicles.js';
 import {KART_RADIUS} from '../src/simulation.js';
 import {CARS} from '../src/car-catalog.js';
 
@@ -64,6 +64,13 @@ test('motorcycle keeps its dedicated handling and lean mechanism',()=>{
  assert.ok(bike.handling.steering>kart.handling.steering);
  assert.ok(bike.handling.radius<kart.handling.radius);
  assert.ok(buildVehicle({car:bike.id}).lean?.isGroup);
+});
+
+test('wheel rotation advances from signed travel and exposes readable tread',()=>{
+ const vehicle=buildVehicle({car:'apex',color:0xf04fa3}),before=vehicle.wheels.map(wheel=>wheel.userData.roll.rotation.x);
+ rollVehicleWheels(vehicle.wheels,2.3);
+ assert.ok(vehicle.wheels.every((wheel,index)=>wheel.userData.roll.rotation.x!==before[index]));
+ assert.ok(vehicle.wheels.every(wheel=>wheel.userData.roll.getObjectByName('animated-wheel-tread')?.count===12));
 });
 
 test('supplied PBR car materials keep texture contrast and environment reflections',()=>{

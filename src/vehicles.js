@@ -25,10 +25,10 @@ function cloneModel(template){
 }
 
 const WHEEL_LAYOUTS=Object.freeze({
- apex:{radius:.43,width:.34,positions:[[-.86,.43,-.94],[.86,.43,-.94],[-.86,.43,.9],[.86,.43,.9]]},
- motorcycle:{radius:.43,width:.18,positions:[[0,.43,-1.03],[0,.43,.92]]},
- roadster:{radius:.35,width:.28,positions:[[-.76,.35,-.91],[.76,.35,-.91],[-.76,.35,.84],[.76,.35,.84]]},
- 'apex-formula':{radius:.36,width:.3,positions:[[-.72,.36,-.92],[.72,.36,-.92],[-.72,.38,.86],[.72,.38,.86]]},
+ apex:{radius:.52,width:.44,positions:[[-.83,.57,-.94],[.83,.57,-.94],[-.83,.57,.9],[.83,.57,.9]]},
+ motorcycle:{radius:.43,width:.18,positions:[[0,.48,-1.03],[0,.48,.92]]},
+ roadster:{radius:.35,width:.28,positions:[[-.76,.4,-.91],[.76,.4,-.91],[-.76,.4,.84],[.76,.4,.84]]},
+ 'apex-formula':{radius:.37,width:.32,positions:[[-.94,.42,-.92],[.94,.42,-.92],[-.94,.43,.86],[.94,.43,.86]]},
 });
 
 function animatedWheels(parent,car,color){
@@ -49,10 +49,13 @@ function animatedWheels(parent,car,color){
    const bar=new THREE.Mesh(new THREE.BoxGeometry(layout.width*1.16,layout.radius*.68,.045),hubMaterial.clone());
    bar.rotation.x=spoke*Math.PI/5;bar.castShadow=true;roll.add(bar);
   }
+  const treadMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(layout.width*1.04,.052,layout.radius*.2),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.68,metalness:.04,envMapIntensity:1.1}),12),treadTransform=new THREE.Object3D();treadMesh.name='animated-wheel-tread';treadMesh.castShadow=true;for(let tread=0;tread<12;tread++){const angle=tread*Math.PI/6;treadTransform.position.set(0,Math.sin(angle)*(layout.radius+.006),Math.cos(angle)*(layout.radius+.006));treadTransform.rotation.set(angle,0,0);treadTransform.updateMatrix();treadMesh.setMatrixAt(tread,treadTransform.matrix);treadMesh.setColorAt(tread,new THREE.Color(tread%4===0?0xbcc5cb:tread%2?0x111418:0x30363d));}treadMesh.instanceMatrix.needsUpdate=true;treadMesh.instanceColor.needsUpdate=true;roll.add(treadMesh);
   parent.add(steer);wheels.push(steer);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);
  }
  return {wheels,front};
 }
+
+export function rollVehicleWheels(wheels,distance,radius=.46){for(const wheel of wheels)wheel.userData.roll.rotation.x-=distance/radius;}
 
 function normalizeTemplate(scene,car){
  const source=scene.clone(true),template=new THREE.Group();
