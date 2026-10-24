@@ -25,10 +25,10 @@ function cloneModel(template){
 }
 
 const WHEEL_LAYOUTS=Object.freeze({
- apex:{radius:.52,width:.44,positions:[[-.83,.57,-.94],[.83,.57,-.94],[-.83,.57,.9],[.83,.57,.9]]},
- motorcycle:{radius:.43,width:.18,positions:[[0,.48,-1.03],[0,.48,.92]]},
- roadster:{radius:.35,width:.28,positions:[[-.76,.4,-.91],[.76,.4,-.91],[-.76,.4,.84],[.76,.4,.84]]},
- 'apex-formula':{radius:.37,width:.32,positions:[[-.94,.42,-.92],[.94,.42,-.92],[-.94,.43,.86],[.94,.43,.86]]},
+ apex:{radius:.56,width:.52,positions:[[-.785,.59,-.88],[.785,.59,-.88],[-.785,.63,.91],[.785,.63,.91]]},
+ motorcycle:{radius:.49,width:.25,positions:[[0,.5,-.98],[0,.52,.92]]},
+ roadster:{radius:.4,width:.3,positions:[[-.715,.41,-.86],[.715,.41,-.86],[-.67,.43,.84],[.67,.43,.84]],widths:[.3,.3,.22,.22]},
+ 'apex-formula':{radius:.4,width:.28,positions:[[-.86,.44,-.9],[.86,.44,-.9],[-.805,.57,.86],[.805,.57,.86]],radii:[.4,.4,.43,.43],widths:[.28,.28,.18,.18]},
 });
 
 function fallbackWheels(parent,car,color){
@@ -38,7 +38,7 @@ function fallbackWheels(parent,car,color){
  const hubMaterial=new THREE.MeshStandardMaterial({color:0xdce5eb,roughness:.22,metalness:.86,envMapIntensity:1.6});
  for(const [index,[x,y,z]] of layout.positions.entries()){
   const steer=new THREE.Group(),roll=new THREE.Group();
-  steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.set(x,y,z);steer.add(roll);steer.userData.roll=roll;
+  steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.set(x,y,z);steer.add(roll);steer.userData.roll=roll;steer.userData.radius=(layout.radii?.[index]||layout.radius)*VEHICLE_SCALE;
   const tire=new THREE.Mesh(new THREE.TorusGeometry(layout.radius-layout.width*.28,layout.width*.28,12,24),tireMaterial.clone());
   tire.name='animated-wheel-tire';tire.rotation.y=Math.PI/2;tire.castShadow=true;roll.add(tire);
   const rim=new THREE.Mesh(new THREE.CylinderGeometry(layout.radius*.49,layout.radius*.49,layout.width*1.06,18),rimMaterial.clone());
@@ -49,7 +49,7 @@ function fallbackWheels(parent,car,color){
    const bar=new THREE.Mesh(new THREE.BoxGeometry(layout.width*1.16,layout.radius*.68,.045),hubMaterial.clone());
    bar.rotation.x=spoke*Math.PI/5;bar.castShadow=true;roll.add(bar);
   }
-  const treadMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(layout.width*1.04,.052,layout.radius*.2),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.68,metalness:.04,envMapIntensity:1.1}),12),treadTransform=new THREE.Object3D();treadMesh.name='animated-wheel-tread';treadMesh.castShadow=true;for(let tread=0;tread<12;tread++){const angle=tread*Math.PI/6;treadTransform.position.set(0,Math.sin(angle)*(layout.radius+.006),Math.cos(angle)*(layout.radius+.006));treadTransform.rotation.set(angle,0,0);treadTransform.updateMatrix();treadMesh.setMatrixAt(tread,treadTransform.matrix);treadMesh.setColorAt(tread,new THREE.Color(tread%4===0?0xbcc5cb:tread%2?0x111418:0x30363d));}treadMesh.instanceMatrix.needsUpdate=true;treadMesh.instanceColor.needsUpdate=true;roll.add(treadMesh);
+  const treadMesh=new THREE.InstancedMesh(new THREE.BoxGeometry(layout.width*1.04,.052,layout.radius*.2),new THREE.MeshStandardMaterial({color:0xffffff,roughness:.68,metalness:.04,envMapIntensity:1.1}),12),treadTransform=new THREE.Object3D();treadMesh.name='animated-wheel-tread';treadMesh.castShadow=true;for(let tread=0;tread<12;tread++){const angle=tread*Math.PI/6;treadTransform.position.set(0,Math.sin(angle)*(layout.radius-.018),Math.cos(angle)*(layout.radius-.018));treadTransform.rotation.set(angle,0,0);treadTransform.updateMatrix();treadMesh.setMatrixAt(tread,treadTransform.matrix);treadMesh.setColorAt(tread,new THREE.Color(tread%4===0?0xbcc5cb:tread%2?0x111418:0x30363d));}treadMesh.instanceMatrix.needsUpdate=true;treadMesh.instanceColor.needsUpdate=true;roll.add(treadMesh);
   parent.add(steer);wheels.push(steer);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);
  }
  return {wheels,front};
@@ -67,10 +67,10 @@ function subsetGeometry(source,triangles,matrix=null,center=null){
 
 export function rigOriginalWheels(body,model,car){
  const layout=WHEEL_LAYOUTS[car.id],wheels=[],front=[],centers=layout.positions.map(position=>new THREE.Vector3(...position)),rolls=[];
- for(const [index,center] of centers.entries()){const steer=new THREE.Group(),roll=new THREE.Group();steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.copy(center);steer.add(roll);steer.userData.roll=roll;wheels.push(steer);rolls.push(roll);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);}
+ for(const [index,center] of centers.entries()){const steer=new THREE.Group(),roll=new THREE.Group();steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.copy(center);steer.add(roll);steer.userData.roll=roll;steer.userData.radius=(layout.radii?.[index]||layout.radius)*VEHICLE_SCALE;wheels.push(steer);rolls.push(roll);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);}
  body.updateMatrixWorld(true);const inverseBody=new THREE.Matrix4().copy(body.matrixWorld).invert(),candidates=[],counts=centers.map(()=>0);
- model.traverse(mesh=>{if(!mesh.isMesh||!mesh.geometry?.attributes?.position)return;const source=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone(),toBody=new THREE.Matrix4().multiplyMatrices(inverseBody,mesh.matrixWorld),position=source.attributes.position,point=new THREE.Vector3(),triangles=Array.from({length:centers.length},()=>[]),bodyTriangles=[];
-  for(let triangle=0;triangle<position.count/3;triangle++){point.set(0,0,0);for(let corner=0;corner<3;corner++){const p=new THREE.Vector3().fromBufferAttribute(position,triangle*3+corner).applyMatrix4(toBody);point.add(p);}point.multiplyScalar(1/3);let wheel=-1,best=Infinity;for(let index=0;index<centers.length;index++){const center=centers[index],axle=Math.abs(point.x-center.x),radial=Math.hypot(point.y-center.y,point.z-center.z),score=axle/layout.width+radial/layout.radius;if(axle<=layout.width*.62&&radial<=layout.radius*1.12&&score<best){wheel=index;best=score;}}if(wheel<0)bodyTriangles.push(triangle);else{triangles[wheel].push(triangle);counts[wheel]++;}}
+ model.traverse(mesh=>{if(!mesh.isMesh||!mesh.geometry?.attributes?.position)return;const source=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone(),toBody=new THREE.Matrix4().multiplyMatrices(inverseBody,mesh.matrixWorld),position=source.attributes.position,uv=source.attributes.uv,sample=textureSampler(Array.isArray(mesh.material)?mesh.material[0]:mesh.material),point=new THREE.Vector3(),triangles=Array.from({length:centers.length},()=>[]),bodyTriangles=[];
+  for(let triangle=0;triangle<position.count/3;triangle++){point.set(0,0,0);let u=0,v=0;for(let corner=0;corner<3;corner++){const vertex=triangle*3+corner,p=new THREE.Vector3().fromBufferAttribute(position,vertex).applyMatrix4(toBody);point.add(p);if(uv){u+=uv.getX(vertex);v+=uv.getY(vertex);}}point.multiplyScalar(1/3);u/=3;v/=3;const dark=sample?sample(u,v)<.3:true;let wheel=-1,best=Infinity;for(let index=0;index<centers.length;index++){const center=centers[index],radius=layout.radii?.[index]||layout.radius,width=layout.widths?.[index]||layout.width,axle=Math.abs(point.x-center.x),radial=Math.hypot(point.y-center.y,point.z-center.z),score=axle/width+radial/radius,isTire=radial>=radius*.52;if(axle<=width*.57&&radial<=radius*1.06&&(isTire||dark)&&score<best){wheel=index;best=score;}}if(wheel<0)bodyTriangles.push(triangle);else{triangles[wheel].push(triangle);counts[wheel]++;}}
   candidates.push({mesh,source,toBody,bodyTriangles,triangles});
  });
  if(counts.some(count=>count<80))return null;
@@ -78,7 +78,11 @@ export function rigOriginalWheels(body,model,car){
  for(const wheel of wheels)body.add(wheel);body.userData.wheelRig='original-asset';body.userData.wheelTriangles=counts;return{wheels,front};
 }
 
-export function rollVehicleWheels(wheels,distance,radius=.46){for(const wheel of wheels)wheel.userData.roll.rotation.x-=distance/radius;}
+function textureSampler(material){
+ const image=material?.map?.image;if(typeof document==='undefined'||!image)return null;try{const size=512,canvas=document.createElement('canvas');canvas.width=canvas.height=size;const context=canvas.getContext('2d',{willReadFrequently:true});context.drawImage(image,0,0,size,size);const pixels=context.getImageData(0,0,size,size).data;return(u,v)=>{const x=Math.min(size-1,Math.max(0,Math.floor((u-Math.floor(u))*size))),y=Math.min(size-1,Math.max(0,Math.floor((1-(v-Math.floor(v)))*size))),offset=(y*size+x)*4;return(pixels[offset]*.2126+pixels[offset+1]*.7152+pixels[offset+2]*.0722)/255;};}catch{return null;}
+}
+
+export function rollVehicleWheels(wheels,distance,radius=.46){for(const wheel of wheels)wheel.userData.roll.rotation.x-=distance/(wheel.userData.radius||radius);}
 
 function normalizeTemplate(scene,car){
  const source=scene.clone(true),template=new THREE.Group();

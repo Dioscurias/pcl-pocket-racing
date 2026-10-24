@@ -19,6 +19,7 @@ test('race score uses a 140 BPM half-time pattern with a denser final lap',()=>{
  assert.deepEqual(RACE_MUSIC_PROFILE.snareSteps,[8]);
  assert.equal(RACE_MUSIC_PROFILE.finalLapHatStep,1);
  assert.ok(RACE_MUSIC_PROFILE.kickSteps.length>=3);
+ assert.ok(Math.min(...RACE_MUSIC_PROFILE.bass)>=80,'bass must stay above speaker-rattling sub-bass frequencies');
 });
 
 test('every synthesized sound fades in and out instead of clicking the speaker',()=>{

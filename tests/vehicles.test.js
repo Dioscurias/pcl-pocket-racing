@@ -70,6 +70,8 @@ test('wheel rotation advances from signed travel and exposes readable tread',()=
  const vehicle=buildVehicle({car:'apex',color:0xf04fa3}),before=vehicle.wheels.map(wheel=>wheel.userData.roll.rotation.x);
  rollVehicleWheels(vehicle.wheels,2.3);
  assert.ok(vehicle.wheels.every((wheel,index)=>wheel.userData.roll.rotation.x!==before[index]));
+ assert.ok(vehicle.wheels.every(wheel=>wheel.userData.radius>0));
+ assert.ok(Math.abs(vehicle.wheels[0].userData.roll.rotation.x+2.3/vehicle.wheels[0].userData.radius)<1e-8);
  assert.ok(vehicle.wheels.every(wheel=>wheel.userData.roll.getObjectByName('animated-wheel-tread')?.count===12));
 });
 
