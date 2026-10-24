@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 import * as THREE from 'three';
-import {buildVehicle,preloadVehicleAssets,vehicleAssetsReady,VEHICLE_SCALE,rollVehicleWheels} from '../src/vehicles.js';
+import {buildVehicle,preloadVehicleAssets,vehicleAssetsReady,VEHICLE_SCALE,rollVehicleWheels,rigOriginalWheels} from '../src/vehicles.js';
 import {KART_RADIUS} from '../src/simulation.js';
 import {CARS} from '../src/car-catalog.js';
 
@@ -71,6 +71,13 @@ test('wheel rotation advances from signed travel and exposes readable tread',()=
  rollVehicleWheels(vehicle.wheels,2.3);
  assert.ok(vehicle.wheels.every((wheel,index)=>wheel.userData.roll.rotation.x!==before[index]));
  assert.ok(vehicle.wheels.every(wheel=>wheel.userData.roll.getObjectByName('animated-wheel-tread')?.count===12));
+});
+
+test('baked vehicle triangles are extracted into original-material wheel pivots',()=>{
+ const centers=[[-.83,.57,-.94],[.83,.57,-.94],[-.83,.57,.9],[.83,.57,.9]],positions=[];
+ for(const [x,y,z] of centers)for(let triangle=0;triangle<90;triangle++){const angle=triangle/90*Math.PI*2,r=.44;positions.push(x,y+Math.sin(angle)*r,z+Math.cos(angle)*r,x+.02,y+Math.sin(angle+.03)*r,z+Math.cos(angle+.03)*r,x-.02,y+Math.sin(angle+.06)*r,z+Math.cos(angle+.06)*r);}
+ positions.push(-.2,.7,0,.2,.7,0,0,1,0);const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();const material=new THREE.MeshStandardMaterial({map:new THREE.Texture()}),model=new THREE.Group(),mesh=new THREE.Mesh(geometry,material),body=new THREE.Group();model.add(mesh);body.add(model);
+ const rig=rigOriginalWheels(body,model,CARS[0]);assert.ok(rig);assert.equal(body.userData.wheelRig,'original-asset');assert.equal(rig.wheels.length,4);assert.ok(rig.wheels.every(wheel=>wheel.getObjectByName('asset-wheel-rubber')?.material===material));assert.equal(body.getObjectByName('animated-wheel-tread'),undefined);
 });
 
 test('supplied PBR car materials keep texture contrast and environment reflections',()=>{

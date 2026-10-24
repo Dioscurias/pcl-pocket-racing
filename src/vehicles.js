@@ -31,7 +31,7 @@ const WHEEL_LAYOUTS=Object.freeze({
  'apex-formula':{radius:.37,width:.32,positions:[[-.94,.42,-.92],[.94,.42,-.92],[-.94,.43,.86],[.94,.43,.86]]},
 });
 
-function animatedWheels(parent,car,color){
+function fallbackWheels(parent,car,color){
  const layout=WHEEL_LAYOUTS[car.id],wheels=[],front=[];
  const tireMaterial=new THREE.MeshStandardMaterial({color:0x111419,roughness:.7,metalness:.08,envMapIntensity:1.1});
  const rimMaterial=new THREE.MeshStandardMaterial({color,roughness:.24,metalness:.72,envMapIntensity:1.5});
@@ -53,6 +53,29 @@ function animatedWheels(parent,car,color){
   parent.add(steer);wheels.push(steer);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);
  }
  return {wheels,front};
+}
+
+function subsetGeometry(source,triangles,matrix=null,center=null){
+ const geometry=new THREE.BufferGeometry(),normalMatrix=matrix?new THREE.Matrix3().getNormalMatrix(matrix):null,point=new THREE.Vector3(),normal=new THREE.Vector3();
+ for(const [name,attribute] of Object.entries(source.attributes)){
+  if(attribute.itemSize>4)continue;const values=[];
+  for(const triangle of triangles)for(let corner=0;corner<3;corner++){const index=triangle*3+corner;if(name==='position'&&matrix){point.fromBufferAttribute(attribute,index).applyMatrix4(matrix);if(center)point.sub(center);values.push(point.x,point.y,point.z);continue;}if(name==='normal'&&normalMatrix){normal.fromBufferAttribute(attribute,index).applyNormalMatrix(normalMatrix);values.push(normal.x,normal.y,normal.z);continue;}for(let component=0;component<attribute.itemSize;component++)values.push(component===0?attribute.getX(index):component===1?attribute.getY(index):component===2?attribute.getZ(index):attribute.getW(index));}
+  geometry.setAttribute(name,new THREE.BufferAttribute(new attribute.array.constructor(values),attribute.itemSize,attribute.normalized));
+ }
+ geometry.computeBoundingBox();geometry.computeBoundingSphere();return geometry;
+}
+
+export function rigOriginalWheels(body,model,car){
+ const layout=WHEEL_LAYOUTS[car.id],wheels=[],front=[],centers=layout.positions.map(position=>new THREE.Vector3(...position)),rolls=[];
+ for(const [index,center] of centers.entries()){const steer=new THREE.Group(),roll=new THREE.Group();steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.copy(center);steer.add(roll);steer.userData.roll=roll;wheels.push(steer);rolls.push(roll);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);}
+ body.updateMatrixWorld(true);const inverseBody=new THREE.Matrix4().copy(body.matrixWorld).invert(),candidates=[],counts=centers.map(()=>0);
+ model.traverse(mesh=>{if(!mesh.isMesh||!mesh.geometry?.attributes?.position)return;const source=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone(),toBody=new THREE.Matrix4().multiplyMatrices(inverseBody,mesh.matrixWorld),position=source.attributes.position,point=new THREE.Vector3(),triangles=Array.from({length:centers.length},()=>[]),bodyTriangles=[];
+  for(let triangle=0;triangle<position.count/3;triangle++){point.set(0,0,0);for(let corner=0;corner<3;corner++){const p=new THREE.Vector3().fromBufferAttribute(position,triangle*3+corner).applyMatrix4(toBody);point.add(p);}point.multiplyScalar(1/3);let wheel=-1,best=Infinity;for(let index=0;index<centers.length;index++){const center=centers[index],axle=Math.abs(point.x-center.x),radial=Math.hypot(point.y-center.y,point.z-center.z),score=axle/layout.width+radial/layout.radius;if(axle<=layout.width*.62&&radial<=layout.radius*1.12&&score<best){wheel=index;best=score;}}if(wheel<0)bodyTriangles.push(triangle);else{triangles[wheel].push(triangle);counts[wheel]++;}}
+  candidates.push({mesh,source,toBody,bodyTriangles,triangles});
+ });
+ if(counts.some(count=>count<80))return null;
+ for(const {mesh,source,toBody,bodyTriangles,triangles} of candidates){mesh.geometry=subsetGeometry(source,bodyTriangles);for(let index=0;index<triangles.length;index++){if(!triangles[index].length)continue;const wheelMesh=new THREE.Mesh(subsetGeometry(source,triangles[index],toBody,centers[index]),mesh.material);wheelMesh.name='asset-wheel-rubber';wheelMesh.castShadow=true;wheelMesh.receiveShadow=true;rolls[index].add(wheelMesh);}}
+ for(const wheel of wheels)body.add(wheel);body.userData.wheelRig='original-asset';body.userData.wheelTriangles=counts;return{wheels,front};
 }
 
 export function rollVehicleWheels(wheels,distance,radius=.46){for(const wheel of wheels)wheel.userData.roll.rotation.x-=distance/radius;}
@@ -109,8 +132,8 @@ export function buildVehicle({car='apex',color=0x1859b7}={}){
  const model=normalizeCar(car),meta=carById(model),group=new THREE.Group(),body=new THREE.Group(),driver=new THREE.Group();
  const lean=meta.type==='motorcycle'?new THREE.Group():null,root=lean||body;
  if(lean){group.add(lean);lean.add(body);}else group.add(body);
- const template=templates.get(model)||fallbackTemplate(meta);body.add(cloneModel(template));body.name='vehicle-body';driver.name='driver-animation';body.add(driver);
- const {wheels,front}=animatedWheels(body,meta,color),paint=glowMarker(group,color,meta),exhaust=exhaustEffect(body,meta);
+ const template=templates.get(model)||fallbackTemplate(meta),asset=cloneModel(template);body.add(asset);body.name='vehicle-body';driver.name='driver-animation';body.add(driver);
+ const rig=successfulAssets.has(model)?rigOriginalWheels(body,asset,meta):null,{wheels,front}=rig||fallbackWheels(body,meta,color),paint=glowMarker(group,color,meta),exhaust=exhaustEffect(body,meta);
  group.name=`vehicle-${model}`;group.userData.model=model;group.userData.asset=meta.asset;group.userData.blueprint='supplied-glb';group.scale.setScalar(VEHICLE_SCALE);
  return {group,body,paint,driver,front,wheels,exhaust,model,...(lean?{lean}:{})};
 }

@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeAudioPreferences,musicState,RACE_MUSIC_PROFILE,scheduleEnvelope} from '../src/audio.js';
+import {normalizeAudioPreferences,musicState,RACE_MUSIC_PROFILE,scheduleEnvelope,safeAudioTime} from '../src/audio.js';
 
 test('audio preferences clamp volume and preserve mute state',()=>{
  assert.deepEqual(normalizeAudioPreferences({enabled:false,volume:4}),{enabled:false,volume:1});
@@ -24,5 +24,10 @@ test('race score uses a 140 BPM half-time pattern with a denser final lap',()=>{
 test('every synthesized sound fades in and out instead of clicking the speaker',()=>{
  const events=[],gain={cancelScheduledValues:t=>events.push(['cancel',t]),setValueAtTime:(v,t)=>events.push(['set',v,t]),exponentialRampToValueAtTime:(v,t)=>events.push(['ramp',v,t])};
  scheduleEnvelope(gain,10,.12,.2);
- assert.deepEqual(events,[['cancel',10],['set',.0001,10],['ramp',.12,10.006],['ramp',.0001,10.2]]);
+ assert.deepEqual(events,[['cancel',10],['set',.0001,10],['ramp',.12,10.006],['ramp',.0001,10.2],['set',0,10.206]]);
+});
+
+test('late notes are moved ahead of the audio clock so attack ramps cannot be skipped',()=>{
+ assert.equal(safeAudioTime({currentTime:12},11.98),12.008);
+ assert.equal(safeAudioTime({currentTime:12},12.2),12.2);
 });
