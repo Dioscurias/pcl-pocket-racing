@@ -31,6 +31,15 @@ test('campus material families preserve realistic PBR response without emissive 
  }
 });
 
+test('every published course declares shared PBR surface roles',async()=>{
+ const {CAMPUS_MATERIALS,COURSE_MATERIAL_ROLES}=await import('../src/environment-assets.js');
+ for(const id of ['pcl-lobby-loop','bookstack-blitz','jester-vertical-drop','ut-campus-grand-prix']){
+  const roles=COURSE_MATERIAL_ROLES[id];
+  assert.ok(roles,id+' is missing PBR surface roles');
+  for(const role of ['road','floor','wall','trim','prop'])assert.ok(CAMPUS_MATERIALS[roles[role]],`${id} ${role} is not a loaded PBR family`);
+ }
+});
+
 function missingKey(key){return 'missing campus material '+key;}
 
 

@@ -39,6 +39,12 @@ export const CAMPUS_MATERIALS=Object.freeze({
  rubber:family('rubber',{repeat:[2,2],roughness:.72,color:'#26292e',normalScale:.8,ao:false}),
  bark:family('bark',{repeat:[2,5],roughness:.92,color:'#78513a',normalScale:.7}),
 });
+export const COURSE_MATERIAL_ROLES=Object.freeze({
+ 'pcl-lobby-loop':Object.freeze({road:'asphalt',floor:'limestone',wall:'brick',trim:'concrete',prop:'roof'}),
+ 'bookstack-blitz':Object.freeze({road:'asphalt',floor:'limestone',wall:'brick',trim:'concrete',prop:'roof'}),
+ 'jester-vertical-drop':Object.freeze({road:'asphalt',floor:'limestone',wall:'brick',trim:'concrete',prop:'roof'}),
+ 'ut-campus-grand-prix':Object.freeze({road:'asphalt',floor:'grass',wall:'brick',trim:'limestone',prop:'concrete'}),
+});
 
 const materialCache=new Map();
 let materialLoading;
