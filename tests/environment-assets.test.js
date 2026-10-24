@@ -66,3 +66,9 @@ test('campus exposes a dedicated clouded sky generator separate from reflection 
  const assets=await import('../src/environment-assets.js');
  assert.equal(typeof assets.createCampusSkyTexture,'function','campus sky generator is missing');
 });
+
+test('race rendering uses filmic contrast instead of the flat neutral override',async()=>{
+ const source=await import('node:fs/promises').then(({readFile})=>readFile(new URL('../src/scene.js',import.meta.url),'utf8'));
+ assert.match(source,/applyTrackLighting\(track\).*ACESFilmicToneMapping/s);
+ assert.doesNotMatch(source,/applyTrackLighting\(track\).*NeutralToneMapping/s);
+});

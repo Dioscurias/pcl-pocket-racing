@@ -30,14 +30,14 @@ const family=(slug,{repeat=[4,4],roughness=.72,metalness=0,color='#ffffff',norma
  repeat,roughness,metalness,color,normalScale,
 });
 export const CAMPUS_MATERIALS=Object.freeze({
- asphalt:family('asphalt',{repeat:[1.7,7],roughness:.78,color:'#4f575c',normalScale:.7}),
- grass:family('grass',{repeat:[34,34],roughness:.94,color:'#568b43',normalScale:.8}),
- brick:family('brick',{repeat:[5,3],roughness:.8,color:'#bc6948',normalScale:.7}),
- limestone:family('limestone',{repeat:[5,4],roughness:.74,color:'#dbc9a7',normalScale:.55,ao:false}),
- roof:family('roof',{repeat:[5,5],roughness:.72,color:'#ad5037',normalScale:.75}),
- concrete:family('concrete',{repeat:[12,12],roughness:.88,color:'#c9c1b1',normalScale:.5,ao:false}),
- rubber:family('rubber',{repeat:[2,2],roughness:.72,color:'#26292e',normalScale:.8,ao:false}),
- bark:family('bark',{repeat:[2,5],roughness:.92,color:'#78513a',normalScale:.7}),
+ asphalt:family('asphalt',{repeat:[1.7,7],roughness:.78,color:'#3b4650',normalScale:.7}),
+ grass:family('grass',{repeat:[34,34],roughness:.94,color:'#3f9b42',normalScale:.8}),
+ brick:family('brick',{repeat:[5,3],roughness:.8,color:'#d55b26',normalScale:.7}),
+ limestone:family('limestone',{repeat:[5,4],roughness:.74,color:'#cba96f',normalScale:.55,ao:false}),
+ roof:family('roof',{repeat:[5,5],roughness:.72,color:'#bf3f27',normalScale:.75}),
+ concrete:family('concrete',{repeat:[12,12],roughness:.88,color:'#a69a84',normalScale:.5,ao:false}),
+ rubber:family('rubber',{repeat:[2,2],roughness:.72,color:'#17191e',normalScale:.8,ao:false}),
+ bark:family('bark',{repeat:[2,5],roughness:.92,color:'#603518',normalScale:.7}),
 });
 export const COURSE_MATERIAL_ROLES=Object.freeze({
  'pcl-lobby-loop':Object.freeze({road:'asphalt',floor:'limestone',wall:'brick',trim:'concrete',prop:'roof'}),

@@ -38,7 +38,12 @@ test('supplied meshes preload, normalize, clone and preserve the scene animation
   const vehicle=buildVehicle({car:car.id,color:0x28ccff});instances.push(vehicle);
   assert.equal(vehicle.model,car.id);assert.equal(vehicle.group.userData.asset,car.asset);
   assert.equal(vehicle.group.scale.x,VEHICLE_SCALE);assert.ok(vehicle.body.isGroup);assert.ok(vehicle.driver.isGroup);
-  assert.ok(vehicle.exhaust.isGroup);assert.deepEqual(vehicle.wheels,[]);assert.deepEqual(vehicle.front,[]);
+  assert.ok(vehicle.exhaust.isGroup);
+  assert.equal(vehicle.wheels.length,car.type==='motorcycle'?2:4,`${car.id} needs visible rolling wheels`);
+  assert.equal(vehicle.front.length,car.type==='motorcycle'?1:2,`${car.id} needs steerable front wheels`);
+  assert.ok(vehicle.wheels.every(wheel=>wheel.userData.roll?.isGroup));
+  assert.ok(vehicle.wheels.every(wheel=>wheel.getObjectByName('animated-wheel-tire')));
+  assert.ok(vehicle.wheels.every(wheel=>wheel.getObjectByName('animated-wheel-rim').material.color.getHex()===0x28ccff));
   assert.ok(vehicle.group.getObjectByName(`source:${car.id}`));
   const flag=vehicle.group.getObjectByName('player-color-flag');assert.ok(flag?.isGroup);assert.equal(vehicle.paint.color.getHex(),0x28ccff);
   const bounds=new THREE.Box3().setFromObject(vehicle.group);
@@ -59,6 +64,14 @@ test('motorcycle keeps its dedicated handling and lean mechanism',()=>{
  assert.ok(bike.handling.steering>kart.handling.steering);
  assert.ok(bike.handling.radius<kart.handling.radius);
  assert.ok(buildVehicle({car:bike.id}).lean?.isGroup);
+});
+
+test('supplied PBR car materials keep texture contrast and environment reflections',()=>{
+ const {group}=buildVehicle({car:'roadster'}),materials=[];
+ group.traverse(object=>{if(object.isMesh&&object.name.startsWith('source:'))materials.push(object.material);});
+ assert.ok(materials.length);
+ assert.ok(materials.every(material=>material.roughness<=.58));
+ assert.ok(materials.every(material=>material.envMapIntensity>=1.25));
 });
 
 test('failed asset requests retry and never report the supplied roster as ready',async()=>{

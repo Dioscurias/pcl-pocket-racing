@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {normalizeAudioPreferences,musicState,RACE_MUSIC_PROFILE} from '../src/audio.js';
+import {normalizeAudioPreferences,musicState,RACE_MUSIC_PROFILE,scheduleEnvelope} from '../src/audio.js';
 
 test('audio preferences clamp volume and preserve mute state',()=>{
  assert.deepEqual(normalizeAudioPreferences({enabled:false,volume:4}),{enabled:false,volume:1});
@@ -19,4 +19,10 @@ test('race score uses a 140 BPM half-time pattern with a denser final lap',()=>{
  assert.deepEqual(RACE_MUSIC_PROFILE.snareSteps,[8]);
  assert.equal(RACE_MUSIC_PROFILE.finalLapHatStep,1);
  assert.ok(RACE_MUSIC_PROFILE.kickSteps.length>=3);
+});
+
+test('every synthesized sound fades in and out instead of clicking the speaker',()=>{
+ const events=[],gain={cancelScheduledValues:t=>events.push(['cancel',t]),setValueAtTime:(v,t)=>events.push(['set',v,t]),exponentialRampToValueAtTime:(v,t)=>events.push(['ramp',v,t])};
+ scheduleEnvelope(gain,10,.12,.2);
+ assert.deepEqual(events,[['cancel',10],['set',.0001,10],['ramp',.12,10.006],['ramp',.0001,10.2]]);
 });

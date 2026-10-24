@@ -16,11 +16,42 @@ function cloneModel(template){
   const materials=Array.isArray(object.material)?object.material:[object.material];
   for(const material of materials){
    if(material.map)material.map.colorSpace=THREE.SRGBColorSpace;
+   if(material.isMeshStandardMaterial){material.roughness=Math.min(material.roughness,.55);material.envMapIntensity=1.35;}
    material.needsUpdate=true;
   }
   object.castShadow=true;object.receiveShadow=true;
  });
  return clone;
+}
+
+const WHEEL_LAYOUTS=Object.freeze({
+ apex:{radius:.43,width:.34,positions:[[-.86,.43,-.94],[.86,.43,-.94],[-.86,.43,.9],[.86,.43,.9]]},
+ motorcycle:{radius:.43,width:.18,positions:[[0,.43,-1.03],[0,.43,.92]]},
+ roadster:{radius:.35,width:.28,positions:[[-.76,.35,-.91],[.76,.35,-.91],[-.76,.35,.84],[.76,.35,.84]]},
+ 'apex-formula':{radius:.36,width:.3,positions:[[-.72,.36,-.92],[.72,.36,-.92],[-.72,.38,.86],[.72,.38,.86]]},
+});
+
+function animatedWheels(parent,car,color){
+ const layout=WHEEL_LAYOUTS[car.id],wheels=[],front=[];
+ const tireMaterial=new THREE.MeshStandardMaterial({color:0x111419,roughness:.7,metalness:.08,envMapIntensity:1.1});
+ const rimMaterial=new THREE.MeshStandardMaterial({color,roughness:.24,metalness:.72,envMapIntensity:1.5});
+ const hubMaterial=new THREE.MeshStandardMaterial({color:0xdce5eb,roughness:.22,metalness:.86,envMapIntensity:1.6});
+ for(const [index,[x,y,z]] of layout.positions.entries()){
+  const steer=new THREE.Group(),roll=new THREE.Group();
+  steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.set(x,y,z);steer.add(roll);steer.userData.roll=roll;
+  const tire=new THREE.Mesh(new THREE.TorusGeometry(layout.radius-layout.width*.28,layout.width*.28,12,24),tireMaterial.clone());
+  tire.name='animated-wheel-tire';tire.rotation.y=Math.PI/2;tire.castShadow=true;roll.add(tire);
+  const rim=new THREE.Mesh(new THREE.CylinderGeometry(layout.radius*.49,layout.radius*.49,layout.width*1.06,18),rimMaterial.clone());
+  rim.name='animated-wheel-rim';rim.rotation.z=Math.PI/2;rim.castShadow=true;roll.add(rim);
+  const hub=new THREE.Mesh(new THREE.CylinderGeometry(layout.radius*.13,layout.radius*.13,layout.width*1.14,12),hubMaterial.clone());
+  hub.rotation.z=Math.PI/2;hub.castShadow=true;roll.add(hub);
+  for(let spoke=0;spoke<5;spoke++){
+   const bar=new THREE.Mesh(new THREE.BoxGeometry(layout.width*1.16,layout.radius*.68,.045),hubMaterial.clone());
+   bar.rotation.x=spoke*Math.PI/5;bar.castShadow=true;roll.add(bar);
+  }
+  parent.add(steer);wheels.push(steer);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);
+ }
+ return {wheels,front};
 }
 
 function normalizeTemplate(scene,car){
@@ -76,7 +107,7 @@ export function buildVehicle({car='apex',color=0x1859b7}={}){
  const lean=meta.type==='motorcycle'?new THREE.Group():null,root=lean||body;
  if(lean){group.add(lean);lean.add(body);}else group.add(body);
  const template=templates.get(model)||fallbackTemplate(meta);body.add(cloneModel(template));body.name='vehicle-body';driver.name='driver-animation';body.add(driver);
- const paint=glowMarker(group,color,meta),exhaust=exhaustEffect(body,meta);
+ const {wheels,front}=animatedWheels(body,meta,color),paint=glowMarker(group,color,meta),exhaust=exhaustEffect(body,meta);
  group.name=`vehicle-${model}`;group.userData.model=model;group.userData.asset=meta.asset;group.userData.blueprint='supplied-glb';group.scale.setScalar(VEHICLE_SCALE);
- return {group,body,paint,driver,front:[],wheels:[],exhaust,model,...(lean?{lean}:{})};
+ return {group,body,paint,driver,front,wheels,exhaust,model,...(lean?{lean}:{})};
 }
