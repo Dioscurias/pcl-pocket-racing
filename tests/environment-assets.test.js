@@ -1,0 +1,57 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+import {fileURLToPath} from 'node:url';
+
+test('environment assets are local CC0 files within the transfer budget',async()=>{
+ const moduleUrl=new URL('../src/environment-assets.js',import.meta.url);
+ assert.ok(existsSync(fileURLToPath(moduleUrl)),'environment asset manifest is missing');
+ const {ENVIRONMENT_ASSETS,ENVIRONMENT_BUDGET}=await import(moduleUrl);
+ assert.ok(ENVIRONMENT_ASSETS.length>=8,'complete campus material library');
+ assert.equal(ENVIRONMENT_BUDGET.maxAddedBytes,24*1024*1024);
+ for(const asset of ENVIRONMENT_ASSETS){
+  assert.match(asset.path,/^\/assets\/environment\//);
+  assert.ok(!/^https?:/.test(asset.path),'runtime assets must never hotlink');
+  assert.equal(asset.license,'CC0-1.0');
+  assert.ok(asset.source.startsWith('https://ambientcg.com/a/')||asset.source.startsWith('https://polyhaven.com/a/'));
+ }
+});
+
+test('campus material families preserve realistic PBR response without emissive glow',async()=>{
+ const moduleUrl=new URL('../src/environment-assets.js',import.meta.url);
+ assert.ok(existsSync(fileURLToPath(moduleUrl)),'environment asset manifest is missing');
+ const {CAMPUS_MATERIALS}=await import(moduleUrl);
+ for(const key of ['asphalt','grass','brick','limestone','roof','concrete','rubber']){
+  const material=CAMPUS_MATERIALS[key];
+  assert.ok(material,missingKey(key));
+  assert.ok(material.color&&material.normal&&material.roughness);
+  assert.equal(material.emissive,undefined);
+ }
+});
+
+function missingKey(key){return 'missing campus material '+key;}
+
+
+test('campus facades expose aligned architectural modules',async()=>{
+ const world=await import('../src/course-world.js');
+ assert.equal(typeof world.campusBuildingModules,'function','facade module generator is missing');
+ const modules=world.campusBuildingModules({id:'mccombs',x:0,z:0,w:52,d:47,height:25});
+ assert.ok(modules.windows.length>=24,'hero facade needs repeated inset windows');
+ assert.ok(modules.windows.every(window=>window.y>3&&window.y<23));
+ assert.ok(modules.cornices.length>=2);
+ assert.ok(modules.entrances.length>=1);
+});
+
+test('campus vegetation rotates through Austin tree species',async()=>{
+ const world=await import('../src/course-world.js');
+ assert.equal(typeof world.campusTreeSpecies,'function','tree species selector is missing');
+ assert.deepEqual(Array.from({length:6},(_,index)=>world.campusTreeSpecies(index)),[
+  'live-oak','cedar-elm','crepe-myrtle','live-oak','cedar-elm','crepe-myrtle',
+ ]);
+});
+
+
+test('campus exposes a dedicated clouded sky generator separate from reflection lighting',async()=>{
+ const assets=await import('../src/environment-assets.js');
+ assert.equal(typeof assets.createCampusSkyTexture,'function','campus sky generator is missing');
+});

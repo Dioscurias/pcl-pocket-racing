@@ -5,7 +5,7 @@ import {TRACKS,inFlightRange} from '../src/tracks.js';
 test('road has shared edges and upward-facing triangles instead of overlapping segment wedges',()=>{
  for(const t of TRACKS)for(const section of roadSections(t)){
   const geo=ribbonGeometry(section,t.trackWidth),positions=geo.attributes.position,normals=geo.attributes.normal;
-  assert.equal(positions.count,section.length*2);assert.ok(geo.index.count>0);
+  assert.equal(positions.count,section.length*2);assert.equal(geo.attributes.uv?.count,positions.count,"road UVs match shared vertices");assert.ok(geo.index.count>0);
   for(let i=0;i<normals.count;i++)assert.ok(normals.getY(i)>0,'road faces up');
   for(let i=0;i<section.length;i++)assert.ok(Math.abs(positions.getY(i*2)-(section[i].y||0)-.04)<.00001);
   geo.dispose();

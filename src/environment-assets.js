@@ -1,0 +1,99 @@
+import * as THREE from 'three';
+import {KTX2Loader} from 'three/addons/loaders/KTX2Loader.js';
+import {RGBELoader} from 'three/addons/loaders/RGBELoader.js';
+
+const ROOT='/assets/environment';
+const ambient=(id,slug)=>({
+ id,
+ path:`${ROOT}/textures/${slug}/${slug}-color.ktx2`,
+ source:`https://ambientcg.com/a/${id}`,
+ license:'CC0-1.0',
+});
+export const ENVIRONMENT_BUDGET=Object.freeze({maxAddedBytes:24*1024*1024,maxTextureSize:2048,maxVisibleTriangles:450000,maxDrawCalls:170});
+export const ENVIRONMENT_ASSETS=Object.freeze([
+ ambient('Asphalt033','asphalt'),
+ ambient('Grass005','grass'),
+ ambient('Bricks097','brick'),
+ ambient('Tiles139','limestone'),
+ ambient('RoofingTiles013A','roof'),
+ ambient('Concrete034','concrete'),
+ ambient('Rubber004','rubber'),
+ ambient('Bark014','bark'),
+ {id:'sunflowers_puresky',path:`${ROOT}/hdri/sunflowers_puresky_1k.hdr`,source:'https://polyhaven.com/a/sunflowers_puresky',license:'CC0-1.0'},
+]);
+export const CREDITS_PATH=`${ROOT}/CREDITS.md`;
+const family=(slug,{repeat=[4,4],roughness=.72,metalness=0,color='#ffffff',normalScale=1,ao=true}={})=>Object.freeze({
+ color:`${ROOT}/textures/${slug}/${slug}-color.ktx2`,
+ normal:`${ROOT}/textures/${slug}/${slug}-normal.ktx2`,
+ roughness:`${ROOT}/textures/${slug}/${slug}-roughness.ktx2`,
+ ao:ao?`${ROOT}/textures/${slug}/${slug}-ao.ktx2`:null,
+ repeat,roughness,metalness,color,normalScale,
+});
+export const CAMPUS_MATERIALS=Object.freeze({
+ asphalt:family('asphalt',{repeat:[1.7,7],roughness:.78,color:'#4f575c',normalScale:.7}),
+ grass:family('grass',{repeat:[34,34],roughness:.94,color:'#568b43',normalScale:.8}),
+ brick:family('brick',{repeat:[5,3],roughness:.8,color:'#bc6948',normalScale:.7}),
+ limestone:family('limestone',{repeat:[5,4],roughness:.74,color:'#dbc9a7',normalScale:.55,ao:false}),
+ roof:family('roof',{repeat:[5,5],roughness:.72,color:'#ad5037',normalScale:.75}),
+ concrete:family('concrete',{repeat:[12,12],roughness:.88,color:'#c9c1b1',normalScale:.5,ao:false}),
+ rubber:family('rubber',{repeat:[2,2],roughness:.72,color:'#26292e',normalScale:.8,ao:false}),
+ bark:family('bark',{repeat:[2,5],roughness:.92,color:'#78513a',normalScale:.7}),
+});
+
+const materialCache=new Map();
+let materialLoading;
+let skyTexture;
+const environmentCache=new WeakMap();
+function configured(texture,{srgb=false,repeat=[1,1],anisotropy=4}={}){
+ texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
+ texture.repeat.set(...repeat);
+ texture.anisotropy=anisotropy;
+ if(srgb)texture.colorSpace=THREE.SRGBColorSpace;
+ texture.needsUpdate=true;
+ return texture;
+}
+export function createCampusMaterialLibrary(){
+ if(materialCache.size)return Object.fromEntries(materialCache);
+ for(const [name,spec] of Object.entries(CAMPUS_MATERIALS)){
+  materialCache.set(name,new THREE.MeshStandardMaterial({
+   name:`campus-${name}`,color:spec.color,roughness:spec.roughness,metalness:spec.metalness,
+  }));
+ }
+ return Object.fromEntries(materialCache);
+}
+export function loadCampusMaterialLibrary(renderer){
+ const materials=createCampusMaterialLibrary();
+ if(materialLoading)return materialLoading.then(()=>materials);
+ const loader=new KTX2Loader().setTranscoderPath('/assets/basis/').detectSupport(renderer);
+ const anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+ const load=async(path,options)=>path?configured(await loader.loadAsync(path),{...options,anisotropy}):null;
+ materialLoading=Promise.all(Object.entries(CAMPUS_MATERIALS).map(async([name,spec])=>{
+  const [map,normalMap,roughnessMap,aoMap]=await Promise.all([
+   load(spec.color,{srgb:true,repeat:spec.repeat}),load(spec.normal,{repeat:spec.repeat}),
+   load(spec.roughness,{repeat:spec.repeat}),load(spec.ao,{repeat:spec.repeat}),
+  ]);
+  const material=materials[name];
+  if(aoMap)aoMap.channel=0;
+  Object.assign(material,{map,normalMap,roughnessMap,aoMap});
+  material.normalScale.setScalar(spec.normalScale);
+  material.needsUpdate=true;
+ })).then(()=>{loader.dispose();return materials;}).catch(error=>{loader.dispose();console.warn('Campus PBR textures unavailable',error);return materials;});
+ return materialLoading;
+}
+export function loadCampusEnvironment(renderer){
+ if(environmentCache.has(renderer))return environmentCache.get(renderer);
+ const promise=new RGBELoader().loadAsync(`${ROOT}/hdri/sunflowers_puresky_1k.hdr`).then(background=>{
+  background.mapping=THREE.EquirectangularReflectionMapping;
+  const pmrem=new THREE.PMREMGenerator(renderer),environment=pmrem.fromEquirectangular(background).texture;
+  pmrem.dispose();
+  return {background,environment};
+ });
+ environmentCache.set(renderer,promise);
+ return promise;
+}
+export function createCampusSkyTexture(){
+ if(skyTexture)return skyTexture;
+ const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d'),sky=ctx.createLinearGradient(0,0,0,1024);sky.addColorStop(0,'#167fc2');sky.addColorStop(.48,'#69c8ee');sky.addColorStop(.76,'#c5e9f2');sky.addColorStop(1,'#f1e3c7');ctx.fillStyle=sky;ctx.fillRect(0,0,canvas.width,canvas.height);
+ const clouds=[[260,230,230,70],[760,150,300,82],[1290,290,250,75],[1740,170,280,82],[1050,430,190,58]];for(const [x,y,w,h] of clouds){const cloud=ctx.createRadialGradient(x,y,8,x,y,w*.55);cloud.addColorStop(0,'rgba(255,255,255,.96)');cloud.addColorStop(.55,'rgba(255,255,255,.78)');cloud.addColorStop(1,'rgba(255,255,255,0)');ctx.fillStyle=cloud;ctx.beginPath();ctx.ellipse(x,y,w,h,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.ellipse(x-w*.22,y-h*.35,w*.36,h*.72,0,0,Math.PI*2);ctx.ellipse(x+w*.18,y-h*.28,w*.42,h*.82,0,0,Math.PI*2);ctx.fill();}
+ skyTexture=new THREE.CanvasTexture(canvas);skyTexture.colorSpace=THREE.SRGBColorSpace;return skyTexture;
+}
