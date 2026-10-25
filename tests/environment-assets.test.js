@@ -62,13 +62,11 @@ test('campus vegetation rotates through Austin tree species',async()=>{
 });
 
 
-test('campus exposes a dedicated clouded sky generator separate from reflection lighting',async()=>{
+test('campus exposes a clean clear-sky generator separate from reflection lighting',async()=>{
  const assets=await import('../src/environment-assets.js');
  assert.equal(typeof assets.createCampusSkyTexture,'function','campus sky generator is missing');
- assert.ok(assets.CAMPUS_CLOUD_BANKS.length>=6);
- assert.ok(assets.CAMPUS_CLOUD_BANKS.every(cloud=>cloud.y<.34&&cloud.alpha<=.1&&cloud.puffs>=5),'clouds should stay faint and above the horizon');
- assert.ok(assets.CAMPUS_SKY_STYLE?.cloudBlur>=40,'cloud banks need enough blur to read as continuous forms');
- assert.equal(assets.CAMPUS_SKY_STYLE?.layeredClouds,true);
+ assert.equal(assets.CAMPUS_CLOUD_BANKS.length,0,'procedural cloud blobs should not be rendered');
+ assert.equal(assets.CAMPUS_SKY_STYLE?.clouds,false);
 });
 
 test('race rendering uses filmic contrast instead of the flat neutral override',async()=>{

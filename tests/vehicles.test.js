@@ -78,13 +78,18 @@ test('wheel rotation advances from signed travel and exposes readable tread',()=
 });
 
 test('every supplied vehicle exposes proportional wheel dimensions',async()=>{
- const {WHEEL_LAYOUTS}=await import('../src/vehicles.js');
+ const {WHEEL_LAYOUTS,wheelMaskAccepts}=await import('../src/vehicles.js');
  for(const car of CARS){
   const layout=WHEEL_LAYOUTS[car.id],count=car.type==='motorcycle'?2:4;
   assert.equal(layout.positions.length,count);
   assert.ok(layout.positions.every((_,index)=>(layout.radii?.[index]||layout.radius)>.3));
   assert.ok(layout.positions.every((_,index)=>(layout.widths?.[index]||layout.width)<(layout.radii?.[index]||layout.radius)));
  }
+ const bike=WHEEL_LAYOUTS.motorcycle,formula=WHEEL_LAYOUTS['apex-formula'];
+ assert.equal(wheelMaskAccepts(bike,0,{x:0,y:bike.positions[0][1]+bike.radii[0]*.82,z:bike.positions[0][2]},false),true,'bike tire surface must rotate');
+ assert.equal(wheelMaskAccepts(bike,0,{x:0,y:bike.positions[0][1],z:bike.positions[0][2]},true),false,'bike fork and hub must stay out of the rolling mesh');
+ assert.equal(wheelMaskAccepts(formula,2,{x:formula.positions[2][0],y:formula.positions[2][1]+formula.radii[2]*.8,z:formula.positions[2][2]},false),true,'formula rear tire must rotate');
+ assert.equal(wheelMaskAccepts(WHEEL_LAYOUTS.apex,0,{x:WHEEL_LAYOUTS.apex.positions[0][0],y:WHEEL_LAYOUTS.apex.positions[0][1],z:WHEEL_LAYOUTS.apex.positions[0][2]},true),true,'approved buggy wheel extraction must stay unchanged');
 });
 
 test('baked vehicle triangles are extracted into original-material wheel pivots',()=>{

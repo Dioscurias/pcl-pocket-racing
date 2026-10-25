@@ -25,11 +25,19 @@ function cloneModel(template){
 }
 
 export const WHEEL_LAYOUTS=Object.freeze({
- apex:{radius:.577,width:.536,positions:[[-.809,.608,-.906],[.809,.608,-.906],[-.809,.649,.937],[.809,.649,.937]]},
- motorcycle:{radius:.421,width:.215,positions:[[0,.43,-.843],[0,.447,.791]]},
- roadster:{radius:.388,width:.291,positions:[[-.694,.398,-.834],[.694,.398,-.834],[-.65,.417,.815],[.65,.417,.815]],widths:[.291,.291,.213,.213]},
- 'apex-formula':{radius:.42,width:.294,positions:[[-.903,.462,-.945],[.903,.462,-.945],[-.845,.599,.903],[.845,.599,.903]],radii:[.42,.42,.452,.452],widths:[.294,.294,.189,.189]},
+ apex:{radius:.577,width:.536,mask:'buggy',positions:[[-.809,.608,-.906],[.809,.608,-.906],[-.809,.649,.937],[.809,.649,.937]]},
+ motorcycle:{radius:.426,width:.23,mask:'annulus',innerRatio:.46,positions:[[0,.449,-.81],[.007,.504,.824]],radii:[.426,.4]},
+ roadster:{radius:.391,width:.291,mask:'annulus',innerRatio:.45,positions:[[-.717,.433,-.878],[.717,.433,-.878],[-.653,.437,.823],[.653,.437,.823]],radii:[.391,.391,.378,.378],widths:[.291,.291,.213,.213]},
+ 'apex-formula':{radius:.42,width:.294,mask:'annulus',innerRatio:.46,positions:[[-.909,.42,-.928],[.909,.42,-.928],[-.852,.588,.968],[.852,.588,.968]],radii:[.42,.42,.4,.4],widths:[.294,.294,.189,.189]},
 });
+
+export function wheelMaskAccepts(layout,index,point,dark=false){
+ const [x,y,z]=layout.positions[index],radius=layout.radii?.[index]||layout.radius,width=layout.widths?.[index]||layout.width;
+ const axle=Math.abs(point.x-x),radial=Math.hypot(point.y-y,point.z-z);
+ if(axle>width*.57||radial>radius*1.06)return false;
+ if(layout.mask==='buggy')return radial>=radius*.52||dark;
+ return radial>=radius*(layout.innerRatio||.48);
+}
 
 function fallbackWheels(parent,car,color){
  const layout=WHEEL_LAYOUTS[car.id],wheels=[],front=[];
@@ -70,7 +78,7 @@ export function rigOriginalWheels(body,model,car){
  for(const [index,center] of centers.entries()){const steer=new THREE.Group(),roll=new THREE.Group();steer.name=`wheel-${index<2?'front':'rear'}-${index%2?'right':'left'}`;steer.position.copy(center);steer.add(roll);steer.userData.roll=roll;steer.userData.radius=(layout.radii?.[index]||layout.radius)*VEHICLE_SCALE;wheels.push(steer);rolls.push(roll);if(index<2&&car.type!=='motorcycle'||index===0&&car.type==='motorcycle')front.push(steer);}
  body.updateMatrixWorld(true);const inverseBody=new THREE.Matrix4().copy(body.matrixWorld).invert(),candidates=[],counts=centers.map(()=>0);
  model.traverse(mesh=>{if(!mesh.isMesh||!mesh.geometry?.attributes?.position)return;const source=mesh.geometry.index?mesh.geometry.toNonIndexed():mesh.geometry.clone(),toBody=new THREE.Matrix4().multiplyMatrices(inverseBody,mesh.matrixWorld),position=source.attributes.position,uv=source.attributes.uv,sample=textureSampler(Array.isArray(mesh.material)?mesh.material[0]:mesh.material),point=new THREE.Vector3(),triangles=Array.from({length:centers.length},()=>[]),bodyTriangles=[];
-  for(let triangle=0;triangle<position.count/3;triangle++){point.set(0,0,0);let u=0,v=0;for(let corner=0;corner<3;corner++){const vertex=triangle*3+corner,p=new THREE.Vector3().fromBufferAttribute(position,vertex).applyMatrix4(toBody);point.add(p);if(uv){u+=uv.getX(vertex);v+=uv.getY(vertex);}}point.multiplyScalar(1/3);u/=3;v/=3;const dark=sample?sample(u,v)<.3:true;let wheel=-1,best=Infinity;for(let index=0;index<centers.length;index++){const center=centers[index],radius=layout.radii?.[index]||layout.radius,width=layout.widths?.[index]||layout.width,axle=Math.abs(point.x-center.x),radial=Math.hypot(point.y-center.y,point.z-center.z),score=axle/width+radial/radius,isTire=radial>=radius*.52;if(axle<=width*.57&&radial<=radius*1.06&&(isTire||dark)&&score<best){wheel=index;best=score;}}if(wheel<0)bodyTriangles.push(triangle);else{triangles[wheel].push(triangle);counts[wheel]++;}}
+  for(let triangle=0;triangle<position.count/3;triangle++){point.set(0,0,0);let u=0,v=0;for(let corner=0;corner<3;corner++){const vertex=triangle*3+corner,p=new THREE.Vector3().fromBufferAttribute(position,vertex).applyMatrix4(toBody);point.add(p);if(uv){u+=uv.getX(vertex);v+=uv.getY(vertex);}}point.multiplyScalar(1/3);u/=3;v/=3;const dark=sample?sample(u,v)<.3:true;let wheel=-1,best=Infinity;for(let index=0;index<centers.length;index++){const center=centers[index],radius=layout.radii?.[index]||layout.radius,width=layout.widths?.[index]||layout.width,axle=Math.abs(point.x-center.x),radial=Math.hypot(point.y-center.y,point.z-center.z),score=axle/width+radial/radius;if(wheelMaskAccepts(layout,index,point,dark)&&score<best){wheel=index;best=score;}}if(wheel<0)bodyTriangles.push(triangle);else{triangles[wheel].push(triangle);counts[wheel]++;}}
   candidates.push({mesh,source,toBody,bodyTriangles,triangles});
  });
  if(counts.some(count=>count<80))return null;
