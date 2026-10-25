@@ -51,9 +51,11 @@ let materialLoading;
 let skyTexture;
 const environmentCache=new WeakMap();
 export const CAMPUS_CLOUD_BANKS=Object.freeze([
- Object.freeze({x:.12,y:.17,scale:.85,alpha:.12}),Object.freeze({x:.42,y:.1,scale:1.08,alpha:.15}),
- Object.freeze({x:.72,y:.2,scale:.76,alpha:.1}),Object.freeze({x:.91,y:.12,scale:.92,alpha:.13}),
+ Object.freeze({x:.08,y:.2,scale:.62,alpha:.055,puffs:7}),Object.freeze({x:.25,y:.12,scale:.9,alpha:.075,puffs:10}),
+ Object.freeze({x:.45,y:.23,scale:.58,alpha:.045,puffs:6}),Object.freeze({x:.62,y:.1,scale:.8,alpha:.065,puffs:9}),
+ Object.freeze({x:.8,y:.2,scale:.66,alpha:.05,puffs:7}),Object.freeze({x:.95,y:.13,scale:.76,alpha:.06,puffs:8}),
 ]);
+export const CAMPUS_SKY_STYLE=Object.freeze({cloudBlur:46,layeredClouds:true});
 function configured(texture,{srgb=false,repeat=[1,1],anisotropy=4}={}){
  texture.wrapS=texture.wrapT=THREE.RepeatWrapping;
  texture.repeat.set(...repeat);
@@ -103,7 +105,9 @@ export function loadCampusEnvironment(renderer){
 }
 export function createCampusSkyTexture(){
  if(skyTexture)return skyTexture;
- const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d'),sky=ctx.createLinearGradient(0,0,0,1024);sky.addColorStop(0,'#075184');sky.addColorStop(.45,'#2f9bc8');sky.addColorStop(.76,'#8bd3e9');sky.addColorStop(1,'#d7edf0');ctx.fillStyle=sky;ctx.fillRect(0,0,canvas.width,canvas.height);
- for(const bank of CAMPUS_CLOUD_BANKS){const x=bank.x*canvas.width,y=bank.y*canvas.height,w=360*bank.scale;ctx.save();ctx.filter='blur(14px)';ctx.strokeStyle=`rgba(255,255,255,${bank.alpha})`;ctx.lineWidth=18*bank.scale;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(x-w*.5,y);ctx.bezierCurveTo(x-w*.2,y-22*bank.scale,x+w*.08,y+16*bank.scale,x+w*.5,y-5*bank.scale);ctx.stroke();ctx.lineWidth=8*bank.scale;ctx.beginPath();ctx.moveTo(x-w*.35,y+24*bank.scale);ctx.bezierCurveTo(x-w*.06,y+7*bank.scale,x+w*.18,y+35*bank.scale,x+w*.4,y+12*bank.scale);ctx.stroke();ctx.restore();}
+ const canvas=document.createElement('canvas');canvas.width=2048;canvas.height=1024;const ctx=canvas.getContext('2d'),sky=ctx.createLinearGradient(0,0,0,1024);sky.addColorStop(0,'#075b99');sky.addColorStop(.38,'#159bd2');sky.addColorStop(.72,'#65cceb');sky.addColorStop(1,'#def6fb');ctx.fillStyle=sky;ctx.fillRect(0,0,canvas.width,canvas.height);
+ const haze=ctx.createLinearGradient(0,610,0,1024);haze.addColorStop(0,'rgba(255,255,255,0)');haze.addColorStop(1,'rgba(255,248,226,.24)');ctx.fillStyle=haze;ctx.fillRect(0,610,canvas.width,414);
+ const cloudLayer=document.createElement('canvas');cloudLayer.width=canvas.width;cloudLayer.height=canvas.height;const clouds=cloudLayer.getContext('2d');for(const bank of CAMPUS_CLOUD_BANKS){const cx=bank.x*canvas.width,cy=bank.y*canvas.height,width=520*bank.scale,height=58*bank.scale;clouds.fillStyle=`rgba(226,240,247,${bank.alpha*.42})`;clouds.beginPath();clouds.ellipse(cx,cy+height*.2,width*.6,height*.5,0,0,Math.PI*2);clouds.fill();clouds.fillStyle=`rgba(255,255,255,${bank.alpha})`;for(let puff=0;puff<bank.puffs;puff++){const t=bank.puffs===1?.5:puff/(bank.puffs-1),x=cx+(t-.5)*width*.82,y=cy-Math.sin(t*Math.PI)*height*.22+Math.sin((puff+1)*2.17)*height*.04,rx=height*(1.05+(puff%3)*.12),ry=height*(.52+(puff%4)*.04);clouds.beginPath();clouds.ellipse(x,y,rx,ry,0,0,Math.PI*2);clouds.fill();}}
+ ctx.save();ctx.filter=`blur(${CAMPUS_SKY_STYLE.cloudBlur}px)`;ctx.globalAlpha=.68;ctx.drawImage(cloudLayer,0,0);ctx.restore();
  skyTexture=new THREE.CanvasTexture(canvas);skyTexture.colorSpace=THREE.SRGBColorSpace;return skyTexture;
 }

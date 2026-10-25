@@ -24,11 +24,11 @@ function cloneModel(template){
  return clone;
 }
 
-const WHEEL_LAYOUTS=Object.freeze({
- apex:{radius:.56,width:.52,positions:[[-.785,.59,-.88],[.785,.59,-.88],[-.785,.63,.91],[.785,.63,.91]]},
- motorcycle:{radius:.49,width:.25,positions:[[0,.5,-.98],[0,.52,.92]]},
- roadster:{radius:.4,width:.3,positions:[[-.715,.41,-.86],[.715,.41,-.86],[-.67,.43,.84],[.67,.43,.84]],widths:[.3,.3,.22,.22]},
- 'apex-formula':{radius:.4,width:.28,positions:[[-.86,.44,-.9],[.86,.44,-.9],[-.805,.57,.86],[.805,.57,.86]],radii:[.4,.4,.43,.43],widths:[.28,.28,.18,.18]},
+export const WHEEL_LAYOUTS=Object.freeze({
+ apex:{radius:.577,width:.536,positions:[[-.809,.608,-.906],[.809,.608,-.906],[-.809,.649,.937],[.809,.649,.937]]},
+ motorcycle:{radius:.421,width:.215,positions:[[0,.43,-.843],[0,.447,.791]]},
+ roadster:{radius:.388,width:.291,positions:[[-.694,.398,-.834],[.694,.398,-.834],[-.65,.417,.815],[.65,.417,.815]],widths:[.291,.291,.213,.213]},
+ 'apex-formula':{radius:.42,width:.294,positions:[[-.903,.462,-.945],[.903,.462,-.945],[-.845,.599,.903],[.845,.599,.903]],radii:[.42,.42,.452,.452],widths:[.294,.294,.189,.189]},
 });
 
 function fallbackWheels(parent,car,color){
@@ -88,7 +88,7 @@ function normalizeTemplate(scene,car){
  const source=scene.clone(true),template=new THREE.Group();
  source.rotation.y=car.modelYaw;template.add(source);template.updateMatrixWorld(true);
  let bounds=new THREE.Box3().setFromObject(template),size=bounds.getSize(new THREE.Vector3());
- const scale=car.modelLength/Math.max(size.x,size.z);template.scale.setScalar(scale);template.updateMatrixWorld(true);
+ const scale=car.modelLength*(car.visualScale||1)/Math.max(size.x,size.z);template.scale.setScalar(scale);template.updateMatrixWorld(true);
  bounds=new THREE.Box3().setFromObject(template);const center=bounds.getCenter(new THREE.Vector3());
  template.position.set(-center.x,-bounds.min.y,-center.z);template.updateMatrixWorld(true);
  template.name=`asset:${car.id}`;template.userData.source=car.asset;

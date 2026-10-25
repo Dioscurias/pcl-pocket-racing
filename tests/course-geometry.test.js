@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {campusRaceDecor,curbSegments,ribbonGeometry,roadSections} from '../src/course-world.js';
+import * as courseWorld from '../src/course-world.js';
 import {TRACKS,inFlightRange} from '../src/tracks.js';
 test('road has shared edges and upward-facing triangles instead of overlapping segment wedges',()=>{
  for(const t of TRACKS)for(const section of roadSections(t)){
@@ -54,4 +55,18 @@ test('UT Grand Prix race furniture stays clear of racers and item boxes',()=>{
   assert.ok(prop.clearance>=track.trackWidth/2+3,'race furniture intrudes on the drivable width');
   for(const box of track.itemBoxes)assert.ok(Math.hypot(prop.x-box.x,prop.z-box.z)>=10,'race furniture blocks an item box');
  }
+});
+
+test('pickup boxes use a layered arcade power-box assembly',()=>{
+ assert.equal(courseWorld.ITEM_BOX_STYLE?.shell,'translucent');
+ assert.ok(courseWorld.ITEM_BOX_STYLE?.rings>=2);
+ assert.ok(courseWorld.ITEM_BOX_STYLE?.cornerLights>=8);
+ assert.ok(courseWorld.ITEM_BOX_STYLE?.layers.includes('core'));
+});
+
+test('UT campus is enclosed by a readable race-venue perimeter',()=>{
+ const style=courseWorld.CAMPUS_PERIMETER_STYLE;
+ assert.ok(style?.wallHeight>=2&&style?.fenceHeight>=5);
+ assert.ok(style?.bannerSpacing<=48);
+ assert.ok(style?.lightSpacing<=90);
 });

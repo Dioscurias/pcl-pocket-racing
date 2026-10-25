@@ -14,6 +14,8 @@ test('catalog contains only the four unique supplied designs',()=>{
   ['apex-formula','Apex Formula','/vehicles/formula.glb'],
  ]);
  assert.equal(new Set(CARS.map(car=>car.asset)).size,CARS.length);
+ assert.deepEqual(CARS.map(car=>car.visualScale),[1.03,.86,.97,1.05]);
+ assert.ok(CARS.find(car=>car.type==='motorcycle').visualScale<Math.min(...CARS.filter(car=>car.type!=='motorcycle').map(car=>car.visualScale)));
 });
 
 test('every selected model is a real embedded GLB asset',async()=>{
@@ -73,6 +75,16 @@ test('wheel rotation advances from signed travel and exposes readable tread',()=
  assert.ok(vehicle.wheels.every(wheel=>wheel.userData.radius>0));
  assert.ok(Math.abs(vehicle.wheels[0].userData.roll.rotation.x+2.3/vehicle.wheels[0].userData.radius)<1e-8);
  assert.ok(vehicle.wheels.every(wheel=>wheel.userData.roll.getObjectByName('animated-wheel-tread')?.count===12));
+});
+
+test('every supplied vehicle exposes proportional wheel dimensions',async()=>{
+ const {WHEEL_LAYOUTS}=await import('../src/vehicles.js');
+ for(const car of CARS){
+  const layout=WHEEL_LAYOUTS[car.id],count=car.type==='motorcycle'?2:4;
+  assert.equal(layout.positions.length,count);
+  assert.ok(layout.positions.every((_,index)=>(layout.radii?.[index]||layout.radius)>.3));
+  assert.ok(layout.positions.every((_,index)=>(layout.widths?.[index]||layout.width)<(layout.radii?.[index]||layout.radius)));
+ }
 });
 
 test('baked vehicle triangles are extracted into original-material wheel pivots',()=>{
